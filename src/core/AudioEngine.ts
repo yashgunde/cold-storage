@@ -41,11 +41,12 @@ export class AudioEngine {
       this.master = this.ctx.createGain();
       this.master.gain.value = 0.5;
       this.master.connect(this.ctx.destination);
-      // Ambient hum: two detuned low oscillators, very quiet.
+      // Ambient hum: two detuned sine oscillators, whisper-quiet. Sines
+      // only — a sawtooth's harmonics read as constant static on speakers.
       const humGain = this.ctx.createGain();
-      humGain.gain.value = 0.012;
+      humGain.gain.value = 0.005;
       humGain.connect(this.master);
-      for (const [freq, type] of [[55, 'sawtooth'], [120, 'sine']] as Array<[number, OscillatorType]>) {
+      for (const [freq, type] of [[50, 'sine'], [101, 'sine']] as Array<[number, OscillatorType]>) {
         const osc = this.ctx.createOscillator();
         osc.type = type;
         osc.frequency.value = freq;
@@ -113,7 +114,8 @@ export class AudioEngine {
     src.buffer = this.noiseBuf;
     const filter = this.ctx.createBiquadFilter();
     filter.type = 'lowpass';
-    filter.frequency.value = 240 + Math.random() * 140;
+    // Keep the cutoff low: above ~250 Hz the noise burst reads as hiss.
+    filter.frequency.value = 150 + Math.random() * 80;
     const g = this.ctx.createGain();
     g.gain.setValueAtTime((crouching ? 0.05 : 0.16) * vol, t0);
     g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.11);

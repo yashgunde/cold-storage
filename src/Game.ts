@@ -532,11 +532,13 @@ export class Game {
       const noises = this.noise.drain();
       for (const g of this.guards) {
         g.update(dt, this.player, this.world, noises, (gg) => this.onCaught(gg), senseCtx);
-        // Audible guard footsteps, louder as they close in.
+        // Audible guard footsteps, louder as they close in. Gated on
+        // `active` so the pause overlay is silent, and with no volume
+        // floor so distant patrols fade out instead of crackling forever.
         if (g.travel > 1.9) {
           g.travel = 0;
           const gd = Math.hypot(g.x - px, g.z - pz);
-          if (gd < 13) this.audio.step(false, Math.max(0.12, 1 - gd / 13) * 0.85);
+          if (active && gd < 10) this.audio.step(false, (1 - gd / 10) * 0.7);
         }
       }
       for (const d of this.built.doors) d.update(dt);
