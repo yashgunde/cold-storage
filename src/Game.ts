@@ -133,6 +133,16 @@ export class Game {
     if (btn) btn.textContent = `GRAPHICS: ${high ? 'HIGH' : 'LOW'} — CLICK TO TOGGLE`;
   }
 
+  /** Every character gets a stable voice derived from their name. */
+  private speakAs(name: string, text: string): void {
+    let h = 0;
+    for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) | 0;
+    const pitch = 0.85 + ((h >>> 4) % 30) / 100;
+    const rate = 0.92 + ((h >>> 10) % 22) / 100;
+    const voice = (h >>> 7) % 3;
+    this.audio.say(text, { pitch, rate, voice });
+  }
+
   private persist(): void {
     try {
       localStorage.setItem(SAVE_KEY, JSON.stringify(this.save));
@@ -300,7 +310,7 @@ export class Game {
           }
         },
         {
-          text: 'Open the connecting door (E) and head for the breakroom.',
+          text: 'Find the breakroom (northeast) and open its door (E).',
           done: (g) => g.built!.doors[0].open
         },
         {
@@ -322,6 +332,7 @@ export class Game {
     if (def.tutorial) {
       this.hasLunch = true;
       this.hud.toast('The fridge is empty. Your tupperware is gone. In its place: a sticky note — "welcome to Halcyon."');
+      this.audio.say('Your lunch is gone. Welcome to Halcyon.', { voice: 0, rate: 0.95 });
       this.audio.sting();
       const session = this.session;
       setTimeout(() => {
@@ -348,7 +359,9 @@ export class Game {
   private onGuardState(g: Guard, to: GuardState): void {
     if (to === 'suspicious') {
       this.audio.sting();
-      this.hud.toast(`${g.opts.name}: “${pick(SUSPICIOUS_BARKS)}”`);
+      const bark = pick(SUSPICIOUS_BARKS);
+      this.speakAs(g.opts.name, bark);
+      this.hud.toast(`${g.opts.name}: “${bark}”`);
       if (!this.tipShown) {
         this.tipShown = true;
         this.hud.toast(
@@ -359,9 +372,13 @@ export class Game {
     } else if (to === 'chase') {
       this.stats.spotted++;
       this.audio.alarm();
-      this.hud.toast(`${g.opts.name}: “${pick(CHASE_BARKS)}”`);
+      const bark = pick(CHASE_BARKS);
+      this.speakAs(g.opts.name, bark);
+      this.hud.toast(`${g.opts.name}: “${bark}”`);
     } else if (to === 'return') {
-      this.hud.toast(`${g.opts.name}: “${pick(CALM_BARKS)}”`, 2200);
+      const bark = pick(CALM_BARKS);
+      this.speakAs(g.opts.name, bark);
+      this.hud.toast(`${g.opts.name}: “${bark}”`, 2200);
     }
   }
 
@@ -369,6 +386,7 @@ export class Game {
     if (this.state !== 'play') return;
     this.state = 'caught';
     this.audio.caught();
+    this.speakAs(g.opts.name, "Badge check. Let's take a little walk to H.R.");
     this.hud.showEnd(
       'caught',
       'ESCORTED TO HR',
@@ -514,6 +532,12 @@ export class Game {
       const noises = this.noise.drain();
       for (const g of this.guards) {
         g.update(dt, this.player, this.world, noises, (gg) => this.onCaught(gg), senseCtx);
+        // Audible guard footsteps, louder as they close in.
+        if (g.travel > 1.9) {
+          g.travel = 0;
+          const gd = Math.hypot(g.x - px, g.z - pz);
+          if (gd < 13) this.audio.step(false, Math.max(0.12, 1 - gd / 13) * 0.85);
+        }
       }
       for (const d of this.built.doors) d.update(dt);
       for (const kc of this.built.keycards) {
@@ -523,6 +547,8 @@ export class Game {
       for (const cam of this.built.cameras) {
         if (cam.update(dt, px, pz, this.player.crouching, this.world, behaviorActive)) {
           this.audio.cameraBeep();
+          // PA announcer: UK Female at a measured pace, distinct from guards.
+          this.audio.say('Camera alert. Security has been paged.', { voice: 1, rate: 0.88 });
           this.hud.toast('CAMERA — movement flagged. Security is being paged.');
           this.noise.emit(px, pz, 18, 0.4);
         }

@@ -6,9 +6,36 @@
 export class AudioEngine {
   private ctx: AudioContext | null = null;
   private master: GainNode | null = null;
+  private noiseBuf: AudioBuffer | null = null;
+  private voiceRoster: SpeechSynthesisVoice[] = [];
+
+  /**
+   * Best-sounding voices first: Chrome's Google network voices are far more
+   * natural than the local SAPI ones (Microsoft David sounds robotic).
+   * Locals stay at the end of the roster as offline fallbacks.
+   */
+  private refreshVoices(): void {
+    const all = window.speechSynthesis?.getVoices() ?? [];
+    const preferred = [
+      'Google US English',
+      'Google UK English Female',
+      'Google UK English Male',
+      'Microsoft Zira - English (United States)',
+      'Microsoft Mark - English (United States)'
+    ];
+    const natural = all.filter((v) => /Natural/i.test(v.name) && v.lang.startsWith('en'));
+    const named = preferred
+      .map((n) => all.find((v) => v.name === n))
+      .filter((v): v is SpeechSynthesisVoice => !!v);
+    this.voiceRoster = [...natural, ...named];
+  }
 
   /** Call from any user-gesture handler; safe to call repeatedly. */
   ensure(): void {
+    if (this.voiceRoster.length === 0 && window.speechSynthesis) {
+      this.refreshVoices();
+      window.speechSynthesis.onvoiceschanged = () => this.refreshVoices();
+    }
     if (!this.ctx) {
       this.ctx = new AudioContext();
       this.master = this.ctx.createGain();
@@ -25,8 +52,34 @@ export class AudioEngine {
         osc.connect(humGain);
         osc.start();
       }
+      // White-noise buffer for footstep thuds.
+      this.noiseBuf = this.ctx.createBuffer(1, this.ctx.sampleRate * 0.2, this.ctx.sampleRate);
+      const data = this.noiseBuf.getChannelData(0);
+      for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
     }
     if (this.ctx.state === 'suspended') void this.ctx.resume();
+  }
+
+  /**
+   * Spoken dialogue via the OS speech synthesizer — guards actually talk.
+   * `voice` picks a roster entry (modulo length) so each character keeps a
+   * stable, natural-sounding voice; pitch/rate add variation on top.
+   * Note: Google network voices ignore `pitch`, so voice choice + rate carry
+   * most of the character differentiation.
+   */
+  say(text: string, opts?: { pitch?: number; rate?: number; volume?: number; voice?: number }): void {
+    const synth = window.speechSynthesis;
+    if (!synth) return;
+    // Don't pile up a backlog of barks during a chase.
+    if (synth.speaking && synth.pending) return;
+    const u = new SpeechSynthesisUtterance(text);
+    if (this.voiceRoster.length > 0) {
+      u.voice = this.voiceRoster[(opts?.voice ?? 0) % this.voiceRoster.length];
+    }
+    u.pitch = opts?.pitch ?? 1;
+    u.rate = opts?.rate ?? 1.05;
+    u.volume = opts?.volume ?? 0.9;
+    synth.speak(u);
   }
 
   private blip(
@@ -52,8 +105,23 @@ export class AudioEngine {
     osc.stop(t0 + dur + 0.05);
   }
 
-  step(crouching: boolean): void {
-    this.blip(70 + Math.random() * 25, 0.06, 'triangle', crouching ? 0.015 : 0.05);
+  /** Footstep thud — filtered noise burst. vol scales for distant guards. */
+  step(crouching: boolean, vol = 1): void {
+    if (!this.ctx || !this.master || !this.noiseBuf) return;
+    const t0 = this.ctx.currentTime;
+    const src = this.ctx.createBufferSource();
+    src.buffer = this.noiseBuf;
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.value = 240 + Math.random() * 140;
+    const g = this.ctx.createGain();
+    g.gain.setValueAtTime((crouching ? 0.05 : 0.16) * vol, t0);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.11);
+    src.connect(filter);
+    filter.connect(g);
+    g.connect(this.master);
+    src.start(t0);
+    src.stop(t0 + 0.13);
   }
 
   /** A guard got curious. */

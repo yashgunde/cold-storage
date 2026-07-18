@@ -43,6 +43,8 @@ export class Guard {
   heading = 0;
   state: GuardState = 'patrol';
   suspicion = 0;
+  /** Distance walked since Game last consumed it — drives audible footsteps. */
+  travel = 0;
   readonly figure: CharacterFigure;
   onStateChange?: (g: Guard, from: GuardState, to: GuardState) => void;
 
@@ -61,10 +63,14 @@ export class Guard {
     // LEVELS are a shared singleton that must survive retries untouched.
     this.opts = { ...opts };
     [this.x, this.z] = this.opts.waypoints[0];
+    // Name hash → stable skin/hair per character, matching their voice hash.
+    let seed = 0;
+    for (let i = 0; i < opts.name.length; i++) seed = (seed * 31 + opts.name.charCodeAt(i)) | 0;
+    seed = seed >>> 0;
     this.figure = new CharacterFigure(
       opts.civilian
-        ? { shirt: opts.shirt ?? 0x7c9c6b, pants: opts.pants ?? 0x4a4640 }
-        : { shirt: opts.shirt ?? 0x2c3a55, pants: opts.pants ?? 0x1f2733, cap: 0x22293a }
+        ? { shirt: opts.shirt ?? 0x7c9c6b, pants: opts.pants ?? 0x4a4640, seed }
+        : { shirt: opts.shirt ?? 0x2c3a55, pants: opts.pants ?? 0x1f2733, cap: 0x22293a, seed }
     );
     this.figure.setPosition(this.x, this.z);
   }
@@ -231,6 +237,7 @@ export class Guard {
     const nz = this.z + (dz / d) * speed * dt;
     [this.x, this.z] = world.resolveCircle(nx, nz, 0.32);
     this.speedNow = speed;
+    this.travel += speed * dt;
     return false;
   }
 }

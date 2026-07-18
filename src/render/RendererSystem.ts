@@ -33,11 +33,13 @@ export class RendererSystem {
     this.composer.addPass(new RenderPass(scene, camera));
     // Subtle bloom — high threshold so only emissives (fixtures, windows,
     // keycards, alarm lights) glow, not the whole frame.
+    // Long sightlines stack dozens of glowing troffers + the emissive
+    // ceiling; keep bloom tight or the far end of corridors whites out.
     this.bloom = new UnrealBloomPass(
       new THREE.Vector2(window.innerWidth, window.innerHeight),
-      0.32,
-      0.55,
-      0.82
+      0.22,
+      0.4,
+      0.88
     );
     this.composer.addPass(this.bloom);
     this.composer.addPass(new OutputPass());
