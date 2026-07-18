@@ -154,6 +154,25 @@
     .memo p { font-size: 13.5px; line-height: 1.7; opacity: 0.92; margin: 0 0 10px; }
     .choice-row { display: flex; gap: 18px; flex-wrap: wrap; justify-content: center; margin-top: 14px; }
 
+    #lock-overlay .fine.settings {
+      bottom: 44px; cursor: pointer; pointer-events: auto;
+    }
+    #lock-overlay .fine.settings:hover { opacity: 0.8; color: var(--ice); }
+    #settings { z-index: 8; }
+    .set-rows {
+      display: flex; flex-direction: column; gap: 20px;
+      width: min(480px, 86vw); margin-top: 10px;
+    }
+    .set-row {
+      display: grid; grid-template-columns: 1fr auto auto;
+      align-items: center; gap: 14px;
+      font-size: 12px; letter-spacing: 0.16em; text-align: left;
+    }
+    .set-row input[type="range"] { width: 190px; accent-color: var(--ice); cursor: pointer; }
+    .set-row span {
+      font-variant-numeric: tabular-nums; font-size: 12px;
+      opacity: 0.8; min-width: 5ch; text-align: right;
+    }
     #error-overlay {
       position: absolute; inset: auto 0 0 0; display: none;
       background: #3b0d12; color: #ffd7db; padding: 10px 16px;
@@ -182,6 +201,7 @@
     <div id="lock-overlay" class="hidden">
       <div class="brand">SHIFT PAUSED</div>
       <div class="cta">CLICK TO RESUME</div>
+      <div class="fine settings" id="pause-settings">⚙ SETTINGS</div>
       <div class="fine">M — RETURN TO LOBBY (ABANDONS THE SHIFT)</div>
     </div>
     <div id="menu" class="screen">
@@ -190,6 +210,7 @@
       <div class="tag">Somebody has to do something about the fridge situation.</div>
       <div id="menu-levels"></div>
       <div class="fine" id="quality-btn" style="cursor: pointer; pointer-events: auto;"></div>
+      <div class="fine" id="settings-btn" style="cursor: pointer; pointer-events: auto;">⚙ SETTINGS</div>
       <div class="fine">SELECT A SHIFT · PROGRESS SAVES AUTOMATICALLY · UNAUTHORIZED SNACK REMOVAL IS A CULTURE PROBLEM</div>
     </div>
     <div id="briefing" class="screen hidden">
@@ -209,6 +230,26 @@
         <div class="cta" id="choice-ceo">TAKE IT TO THE SURFACE</div>
         <div class="cta" id="choice-eat">SIT DOWN AND EAT IT</div>
       </div>
+    </div>
+    <div id="settings" class="screen hidden">
+      <div class="brand">HALCYON DYNAMICS · WORKSTATION PREFERENCES</div>
+      <h2>SETTINGS</h2>
+      <div class="set-rows">
+        <label class="set-row">MOUSE SENSITIVITY
+          <input type="range" id="set-sens" min="0.3" max="2.5" step="0.05" />
+          <span id="set-sens-v"></span>
+        </label>
+        <label class="set-row">AUDIO LEVEL
+          <input type="range" id="set-vol" min="0" max="1" step="0.05" />
+          <span id="set-vol-v"></span>
+        </label>
+        <label class="set-row">VOICE VOLUME
+          <input type="range" id="set-voice" min="0" max="1" step="0.05" />
+          <span id="set-voice-v"></span>
+        </label>
+      </div>
+      <div class="cta" id="settings-close">DONE</div>
+      <div class="fine">PREFERENCES SAVE AUTOMATICALLY · HALCYON RESPECTS YOUR CALIBRATION NEEDS</div>
     </div>
     <div id="ending" class="screen hidden">
       <div class="brand">HALCYON DYNAMICS · EXIT INTERVIEW</div>

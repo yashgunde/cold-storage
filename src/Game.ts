@@ -79,7 +79,13 @@ export class Game {
   private tipShown = false;
   private briefingIndex = 0;
 
-  private save: { unlocked: number; quality?: 'high' | 'low' } = { unlocked: 0 };
+  private save: {
+    unlocked: number;
+    quality?: 'high' | 'low';
+    sens?: number;
+    vol?: number;
+    voice?: number;
+  } = { unlocked: 0 };
 
   private lastT = 0;
   private fpsAccum = 0;
@@ -106,7 +112,7 @@ export class Game {
     window.addEventListener('resize', () => this.onResize());
     this.lockOverlay.addEventListener('click', () => {
       this.audio.ensure();
-      this.rendererSystem.renderer.domElement.requestPointerLock();
+      this.input.requestLock();
     });
     document.getElementById('brief-begin')!.addEventListener('click', () => this.beginShift());
     document.getElementById('choice-ceo')!.addEventListener('click', () => this.showEnding(ENDING_CEO));
@@ -120,6 +126,38 @@ export class Game {
     });
     this.applyQuality();
 
+    // ---- Settings panel (menu + pause) ----
+    const settingsEl = document.getElementById('settings')!;
+    const openSettings = () => {
+      settingsEl.classList.remove('hidden');
+      this.applySettings();
+    };
+    document.getElementById('settings-btn')!.addEventListener('click', () => {
+      this.audio.uiClick();
+      openSettings();
+    });
+    document.getElementById('pause-settings')!.addEventListener('click', (e) => {
+      e.stopPropagation(); // the overlay behind it resumes on click
+      this.audio.ensure();
+      openSettings();
+    });
+    document.getElementById('settings-close')!.addEventListener('click', () => {
+      settingsEl.classList.add('hidden');
+      this.audio.uiClick();
+    });
+    const bindSlider = (id: string, apply: (v: number) => void) => {
+      const el = document.getElementById(id) as HTMLInputElement;
+      el.addEventListener('input', () => {
+        apply(parseFloat(el.value));
+        this.applySettings();
+        this.persist();
+      });
+    };
+    bindSlider('set-sens', (v) => (this.save.sens = v));
+    bindSlider('set-vol', (v) => (this.save.vol = v));
+    bindSlider('set-voice', (v) => (this.save.voice = v));
+    this.applySettings();
+
     this.toMenu();
     this.rendererSystem.renderer.setAnimationLoop((t) => this.frame(t));
   }
@@ -131,6 +169,25 @@ export class Game {
     this.rendererSystem.setQuality(high);
     const btn = document.getElementById('quality-btn');
     if (btn) btn.textContent = `GRAPHICS: ${high ? 'HIGH' : 'LOW'} — CLICK TO TOGGLE`;
+  }
+
+  /** Push saved settings into the systems and sync the sliders/labels. */
+  private applySettings(): void {
+    const sens = this.save.sens ?? 1;
+    const vol = this.save.vol ?? 0.5;
+    const voice = this.save.voice ?? 0.9;
+    this.player.lookScale = sens;
+    this.audio.setMasterVolume(vol);
+    this.audio.setVoiceVolume(voice);
+    const sync = (id: string, value: number, label: string) => {
+      const input = document.getElementById(id) as HTMLInputElement | null;
+      const span = document.getElementById(`${id}-v`);
+      if (input && document.activeElement !== input) input.value = String(value);
+      if (span) span.textContent = label;
+    };
+    sync('set-sens', sens, `${sens.toFixed(2)}x`);
+    sync('set-vol', vol, `${Math.round(vol * 100)}%`);
+    sync('set-voice', voice, `${Math.round(voice * 100)}%`);
   }
 
   /** Every character gets a stable voice derived from their name. */
@@ -490,6 +547,12 @@ export class Game {
     this.choiceEl.classList.toggle('hidden', this.state !== 'choice');
     this.endingEl.classList.toggle('hidden', this.state !== 'ending');
     this.lockOverlay.classList.toggle('hidden', this.state !== 'play' || active);
+
+    // Menus need the cursor: release pointer lock the moment any
+    // non-play screen takes over (N/R from the end card used to leave
+    // the lock held, forcing a manual ESC that then tripped Chrome's
+    // relock cooldown).
+    if (this.state !== 'play' && this.input.pointerLocked) document.exitPointerLock();
 
     if (this.state === 'caught' || this.state === 'complete') {
       if (this.input.wasPressed('KeyR')) {

@@ -8,6 +8,19 @@ export class AudioEngine {
   private master: GainNode | null = null;
   private noiseBuf: AudioBuffer | null = null;
   private voiceRoster: SpeechSynthesisVoice[] = [];
+  private masterVolume = 0.5;
+  private voiceVolume = 0.9;
+
+  /** 0..1 master gain for all synthesized SFX; applies live. */
+  setMasterVolume(v: number): void {
+    this.masterVolume = v;
+    if (this.master) this.master.gain.value = v;
+  }
+
+  /** 0..1 loudness for spoken dialogue. */
+  setVoiceVolume(v: number): void {
+    this.voiceVolume = v;
+  }
 
   /**
    * Best-sounding voices first: Chrome's Google network voices are far more
@@ -39,7 +52,7 @@ export class AudioEngine {
     if (!this.ctx) {
       this.ctx = new AudioContext();
       this.master = this.ctx.createGain();
-      this.master.gain.value = 0.5;
+      this.master.gain.value = this.masterVolume;
       this.master.connect(this.ctx.destination);
       // Ambient hum: two detuned sine oscillators, whisper-quiet. Sines
       // only — a sawtooth's harmonics read as constant static on speakers.
@@ -70,7 +83,7 @@ export class AudioEngine {
    */
   say(text: string, opts?: { pitch?: number; rate?: number; volume?: number; voice?: number }): void {
     const synth = window.speechSynthesis;
-    if (!synth) return;
+    if (!synth || this.voiceVolume <= 0.01) return;
     // Don't pile up a backlog of barks during a chase.
     if (synth.speaking && synth.pending) return;
     const u = new SpeechSynthesisUtterance(text);
@@ -79,7 +92,7 @@ export class AudioEngine {
     }
     u.pitch = opts?.pitch ?? 1;
     u.rate = opts?.rate ?? 1.05;
-    u.volume = opts?.volume ?? 0.9;
+    u.volume = (opts?.volume ?? 1) * this.voiceVolume;
     synth.speak(u);
   }
 

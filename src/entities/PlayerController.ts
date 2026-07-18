@@ -19,6 +19,8 @@ export class PlayerController {
   sprinting = false;
   readonly radius = 0.35;
   sensitivity = 0.0023;
+  /** User sensitivity multiplier from settings; scales mouse + arrow look. */
+  lookScale = 1;
   /** Set false while menus/cutscenes own the frame. */
   enabled = true;
   /** Current horizontal speed — feeds noise + visibility in Phase 1. */
@@ -44,12 +46,13 @@ export class PlayerController {
 
   update(dt: number, input: Input, world: CollisionWorld): void {
     if (this.enabled) {
-      this.yaw -= input.mouseDX * this.sensitivity;
-      this.pitch = clamp(this.pitch - input.mouseDY * this.sensitivity, -1.45, 1.45);
+      const sens = this.sensitivity * this.lookScale;
+      this.yaw -= input.mouseDX * sens;
+      this.pitch = clamp(this.pitch - input.mouseDY * sens, -1.45, 1.45);
 
       // Arrow-key look: touchpads often suppress pointer motion while
       // WASD is held (palm rejection), so keys must be able to steer too.
-      const keyLook = 2.6 * dt;
+      const keyLook = 2.6 * this.lookScale * dt;
       if (input.isDown('ArrowLeft')) this.yaw += keyLook;
       if (input.isDown('ArrowRight')) this.yaw -= keyLook;
       if (input.isDown('ArrowUp')) this.pitch = clamp(this.pitch + keyLook * 0.6, -1.45, 1.45);

@@ -30,14 +30,44 @@ export class Input {
       this.mouseDY += e.movementY;
     });
 
-    el.addEventListener('click', () => {
-      if (this.lockingEnabled && !this.pointerLocked) {
-        this.el.requestPointerLock();
-      }
-    });
+    el.addEventListener('click', () => this.requestLock());
     document.addEventListener('pointerlockchange', () => {
-      this.pointerLocked = document.pointerLockElement === this.el;
+      const locked = document.pointerLockElement === this.el;
+      if (this.pointerLocked && !locked) this.lastUnlockAt = performance.now();
+      this.pointerLocked = locked;
     });
+  }
+
+  private lastUnlockAt = 0;
+  private relockTimer: number | null = null;
+
+  /**
+   * Acquire pointer lock, respecting Chrome's ~1.5s cooldown after an
+   * ESC exit. Requests inside the cooldown are deferred until it ends
+   * (the click's transient activation lasts ~5s, so the deferred call
+   * still counts as user-initiated) instead of rejecting with the
+   * "cannot be acquired immediately" SecurityError.
+   */
+  requestLock(): void {
+    if (!this.lockingEnabled || this.pointerLocked) return;
+    const wait = this.lastUnlockAt + 1650 - performance.now();
+    if (wait > 0) {
+      if (this.relockTimer === null) {
+        this.relockTimer = window.setTimeout(() => {
+          this.relockTimer = null;
+          this.requestLock();
+        }, wait + 60);
+      }
+      return;
+    }
+    const req = this.el.requestPointerLock() as unknown as Promise<void> | undefined;
+    if (req && typeof req.catch === 'function') {
+      req.catch(() => {
+        // Browser still said no — restart the cooldown so the next
+        // click defers instead of failing the same way.
+        this.lastUnlockAt = performance.now();
+      });
+    }
   }
 
   isDown(code: string): boolean {
