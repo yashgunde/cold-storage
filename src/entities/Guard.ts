@@ -54,8 +54,13 @@ export class Guard {
   private investigate = { x: 0, z: 0 };
   private lastSeen = { x: 0, z: 0 };
 
-  constructor(readonly opts: GuardOpts) {
-    [this.x, this.z] = opts.waypoints[0];
+  readonly opts: GuardOpts;
+
+  constructor(opts: GuardOpts) {
+    // Clone: lockdown boosts patrolSpeed at runtime, and the defs in
+    // LEVELS are a shared singleton that must survive retries untouched.
+    this.opts = { ...opts };
+    [this.x, this.z] = this.opts.waypoints[0];
     this.figure = new CharacterFigure(
       opts.civilian
         ? { shirt: opts.shirt ?? 0x7c9c6b, pants: opts.pants ?? 0x4a4640 }

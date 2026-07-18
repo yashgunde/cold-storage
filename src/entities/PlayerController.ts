@@ -26,6 +26,7 @@ export class PlayerController {
 
   private vx = 0;
   private vz = 0;
+  private ctrlHeld = false;
   private eyeCurrent = EYE_STAND;
   private bobPhase = 0;
 
@@ -55,7 +56,12 @@ export class PlayerController {
       if (input.isDown('ArrowDown')) this.pitch = clamp(this.pitch - keyLook * 0.6, -1.45, 1.45);
 
       if (input.wasPressed('KeyC')) this.crouching = !this.crouching;
-      if (input.isDown('ControlLeft')) this.crouching = true;
+      // Ctrl is hold-to-crouch: engage on press, release on let-go
+      // (C remains a latching toggle).
+      const ctrl = input.isDown('ControlLeft') || input.isDown('ControlRight');
+      if (ctrl && !this.ctrlHeld) this.crouching = true;
+      else if (!ctrl && this.ctrlHeld) this.crouching = false;
+      this.ctrlHeld = ctrl;
 
       const f = (input.isDown('KeyW') ? 1 : 0) - (input.isDown('KeyS') ? 1 : 0);
       const s = (input.isDown('KeyD') ? 1 : 0) - (input.isDown('KeyA') ? 1 : 0);

@@ -71,6 +71,8 @@ export class Game {
 
   private alertBoost = 0;
   private lockdown = false;
+  /** Bumped on every level load / menu return; invalidates stale timers. */
+  private session = 0;
   private stats = { time: 0, spotted: 0, notes: 0 };
   private tutorialSteps: TutorialStep[] = [];
   private tutorialIndex = 0;
@@ -141,6 +143,7 @@ export class Game {
 
   toMenu(): void {
     this.state = 'menu';
+    this.session++;
     document.exitPointerLock?.();
     this.hud.hideEnd();
     this.hud.setObjective('');
@@ -190,9 +193,13 @@ export class Game {
   /** (Re)build a mission — used on start and on R-restart. */
   loadLevel(index: number): void {
     this.levelIndex = index;
+    this.session++;
     const def = LEVELS[index];
 
-    if (this.built) this.scene.remove(this.built.root);
+    if (this.built) {
+      this.scene.remove(this.built.root);
+      this.disposeLevel(this.built.root);
+    }
     this.world = new CollisionWorld();
     this.interact.clear();
     this.guards = [];
@@ -316,7 +323,10 @@ export class Game {
       this.hasLunch = true;
       this.hud.toast('The fridge is empty. Your tupperware is gone. In its place: a sticky note — "welcome to Halcyon."');
       this.audio.sting();
-      setTimeout(() => this.completeLevel(), 1800);
+      const session = this.session;
+      setTimeout(() => {
+        if (this.session === session) this.completeLevel();
+      }, 1800);
       return;
     }
     this.hasLunch = true;
@@ -401,6 +411,35 @@ export class Game {
     this.persist();
     document.getElementById('ending-title')!.textContent = ending.title;
     document.getElementById('ending-body')!.textContent = ending.body;
+  }
+
+  /**
+   * Free the previous level's GPU resources — geometries, materials,
+   * per-level textures, and the sun's shadow map. Sprite indicator
+   * textures are shared module singletons and are deliberately kept.
+   */
+  private disposeLevel(root: THREE.Object3D): void {
+    root.traverse((obj) => {
+      if ((obj as THREE.Sprite).isSprite) {
+        (obj as THREE.Sprite).material.dispose();
+        return;
+      }
+      const mesh = obj as THREE.Mesh;
+      if (mesh.geometry) mesh.geometry.dispose();
+      if (mesh.material) {
+        const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+        for (const m of mats) {
+          const std = m as THREE.MeshStandardMaterial;
+          std.map?.dispose();
+          m.dispose();
+        }
+      }
+      const light = obj as THREE.DirectionalLight;
+      if (light.isLight && light.shadow?.map) {
+        light.shadow.map.dispose();
+        light.shadow.map = null;
+      }
+    });
   }
 
   private onResize(): void {
