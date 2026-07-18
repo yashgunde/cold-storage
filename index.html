@@ -115,6 +115,45 @@
     }
     @keyframes pulse { 0%,100% { opacity: 0.55; } 50% { opacity: 1; } }
 
+    .screen {
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 14px; text-align: center; padding: 0 8vw;
+      background: rgba(11, 14, 19, 0.82); backdrop-filter: blur(7px);
+      pointer-events: auto; z-index: 6; overflow-y: auto;
+    }
+    .screen.hidden { display: none; }
+    .screen h1 {
+      font-size: clamp(40px, 7vw, 84px); font-weight: 800; letter-spacing: 0.12em;
+      text-shadow: 0 2px 30px rgba(125, 211, 252, 0.25);
+    }
+    .screen h2 { font-size: clamp(26px, 4.4vw, 50px); letter-spacing: 0.14em; }
+    .screen .cta { cursor: pointer; }
+    .screen .cta:hover { border-color: var(--ice); color: var(--ice); }
+    .screen p, .choice-sub { font-size: 14px; opacity: 0.85; max-width: 66ch; line-height: 1.65; }
+    #menu-levels {
+      display: flex; flex-direction: column; gap: 8px; margin-top: 10px;
+      width: min(430px, 84vw);
+    }
+    .lvl-btn {
+      display: flex; justify-content: space-between; align-items: baseline; gap: 14px;
+      padding: 11px 18px; border: 1px solid rgba(232,234,237,0.22);
+      cursor: pointer; transition: border-color 0.15s, background 0.15s;
+    }
+    .lvl-btn:hover { border-color: var(--ice); background: rgba(125,211,252,0.06); }
+    .lvl-btn.locked { opacity: 0.35; cursor: default; }
+    .lvl-btn.locked:hover { border-color: rgba(232,234,237,0.22); background: none; }
+    .lvl-name { font-size: 14px; letter-spacing: 0.16em; font-weight: 600; }
+    .lvl-floor { font-size: 10px; letter-spacing: 0.14em; opacity: 0.55; white-space: nowrap; }
+    .memo {
+      width: min(620px, 86vw); text-align: left;
+      background: rgba(20, 24, 31, 0.9); border-left: 3px solid var(--ice);
+      padding: 18px 22px; margin-top: 4px;
+    }
+    .memo-from { font-size: 11px; letter-spacing: 0.18em; opacity: 0.6; margin-bottom: 10px; text-transform: uppercase; }
+    .memo p { font-size: 13.5px; line-height: 1.7; opacity: 0.92; margin: 0 0 10px; }
+    .choice-row { display: flex; gap: 18px; flex-wrap: wrap; justify-content: center; margin-top: 14px; }
+
     #error-overlay {
       position: absolute; inset: auto 0 0 0; display: none;
       background: #3b0d12; color: #ffd7db; padding: 10px 16px;
@@ -140,12 +179,42 @@
       <p id="end-body"></p>
       <div class="cta">PRESS R TO CLOCK BACK IN</div>
     </div>
-    <div id="lock-overlay">
+    <div id="lock-overlay" class="hidden">
+      <div class="brand">SHIFT PAUSED</div>
+      <div class="cta">CLICK TO RESUME</div>
+      <div class="fine">M — RETURN TO LOBBY (ABANDONS THE SHIFT)</div>
+    </div>
+    <div id="menu" class="screen">
       <div class="brand">HALCYON DYNAMICS · INTERNAL USE ONLY</div>
       <h1>COLD STORAGE</h1>
       <div class="tag">Somebody has to do something about the fridge situation.</div>
-      <div class="cta">CLICK TO REPORT FOR DUTY</div>
-      <div class="fine">GREY-BOX BUILD 0.1 — PHASE 0 · UNAUTHORIZED SNACK REMOVAL IS A CULTURE PROBLEM</div>
+      <div id="menu-levels"></div>
+      <div class="fine" id="quality-btn" style="cursor: pointer; pointer-events: auto;"></div>
+      <div class="fine">SELECT A SHIFT · PROGRESS SAVES AUTOMATICALLY · UNAUTHORIZED SNACK REMOVAL IS A CULTURE PROBLEM</div>
+    </div>
+    <div id="briefing" class="screen hidden">
+      <div class="brand" id="brief-floor"></div>
+      <h2 id="brief-title"></h2>
+      <div class="memo">
+        <div class="memo-from" id="brief-from"></div>
+        <div id="brief-lines"></div>
+      </div>
+      <div class="cta" id="brief-begin">CLICK TO BEGIN SHIFT</div>
+    </div>
+    <div id="choice" class="screen hidden">
+      <div class="brand">SUB-LEVEL B · THE FIRST LUNCH</div>
+      <h2>IT IS IN YOUR HANDS.</h2>
+      <p class="choice-sub">Thirty-nine years cold. Still perfect. The building holds its breath.</p>
+      <div class="choice-row">
+        <div class="cta" id="choice-ceo">TAKE IT TO THE SURFACE</div>
+        <div class="cta" id="choice-eat">SIT DOWN AND EAT IT</div>
+      </div>
+    </div>
+    <div id="ending" class="screen hidden">
+      <div class="brand">HALCYON DYNAMICS · EXIT INTERVIEW</div>
+      <h2 id="ending-title"></h2>
+      <p id="ending-body"></p>
+      <div class="cta" id="ending-menu">RETURN TO THE LOBBY</div>
     </div>
     <div id="error-overlay"></div>
   </div>

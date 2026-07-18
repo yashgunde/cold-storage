@@ -46,6 +46,14 @@ export class PlayerController {
       this.yaw -= input.mouseDX * this.sensitivity;
       this.pitch = clamp(this.pitch - input.mouseDY * this.sensitivity, -1.45, 1.45);
 
+      // Arrow-key look: touchpads often suppress pointer motion while
+      // WASD is held (palm rejection), so keys must be able to steer too.
+      const keyLook = 2.6 * dt;
+      if (input.isDown('ArrowLeft')) this.yaw += keyLook;
+      if (input.isDown('ArrowRight')) this.yaw -= keyLook;
+      if (input.isDown('ArrowUp')) this.pitch = clamp(this.pitch + keyLook * 0.6, -1.45, 1.45);
+      if (input.isDown('ArrowDown')) this.pitch = clamp(this.pitch - keyLook * 0.6, -1.45, 1.45);
+
       if (input.wasPressed('KeyC')) this.crouching = !this.crouching;
       if (input.isDown('ControlLeft')) this.crouching = true;
 

@@ -10,6 +10,8 @@ export interface GuardOpts {
   waypoints: Array<[number, number]>;
   /** Coworkers notice you more slowly than security, but they DO narc. */
   civilian?: boolean;
+  /** Headphones in — immune to noise, sharp-eyed. */
+  deaf?: boolean;
   viewDist?: number;
   patrolSpeed?: number;
   shirt?: number;
@@ -19,6 +21,16 @@ export interface GuardOpts {
 const CAPTURE_DIST = 1.05;
 const SUSPICIOUS_AT = 0.35;
 const HALF_FOV_COS = Math.cos(0.95); // ~109° total field of view
+
+/** What the guard knows about the current climate + player conduct. */
+export interface GuardSenseCtx {
+  /** Extra view distance once the floor knows the lunch is gone. */
+  alertBoost: number;
+  /** Player is somewhere their badge does not allow. */
+  restricted: boolean;
+  /** Player is visibly carrying the contraband. */
+  lunch: boolean;
+}
 
 const lerpAngle = (a: number, b: number, t: number): number => {
   const d = ((b - a + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
@@ -65,8 +77,7 @@ export class Guard {
     world: CollisionWorld,
     noises: NoiseEvent[],
     onCaught: (g: Guard) => void,
-    /** Extra view distance once the floor knows the lunch is gone. */
-    alertBoost: number
+    ctx: GuardSenseCtx
   ): void {
     const px = player.position.x;
     const pz = player.position.z;
@@ -75,7 +86,16 @@ export class Guard {
     const dist = Math.hypot(dx, dz);
 
     // ---- Sight ----
-    const viewDist = ((this.opts.viewDist ?? 13) + alertBoost) * (player.crouching ? 0.62 : 1);
+    // How out-of-place does the player look right now? 0 = a colleague
+    // walking normally, and guards simply don't clock a colleague.
+    let behavior = 0;
+    if (ctx.lunch) behavior = Math.max(behavior, 1.3);
+    if (ctx.restricted) behavior = Math.max(behavior, 1.15);
+    if (player.sprinting || player.speed > 4.3) behavior = Math.max(behavior, 0.85);
+    else if (player.crouching) behavior = Math.max(behavior, 0.7);
+    if (this.state === 'chase' || this.state === 'suspicious') behavior = Math.max(behavior, 0.6);
+
+    const viewDist = ((this.opts.viewDist ?? 13) + ctx.alertBoost) * (player.crouching ? 0.62 : 1);
     const sightMinH = player.crouching ? 0.95 : 1.55;
     let sees = false;
     if (dist < viewDist) {
@@ -86,20 +106,19 @@ export class Guard {
         sees = true;
       }
     }
-    // Proximity sense: brushing past someone is never stealthy.
-    if (!sees && dist < 1.5 && !world.segmentBlocked(this.x, this.z, px, pz, sightMinH)) {
+    // Proximity sense: brushing past someone while acting shifty.
+    if (!sees && behavior > 0 && dist < 1.5 && !world.segmentBlocked(this.x, this.z, px, pz, sightMinH)) {
       sees = true;
     }
 
-    if (sees) {
+    if (sees && behavior > 0) {
       this.lastSeen.x = px;
       this.lastSeen.z = pz;
       if (this.state !== 'chase') {
         const closeness = 1 - dist / (viewDist || 1);
-        let rate = 1.5 * (0.35 + 0.65 * closeness);
-        if (player.crouching) rate *= 0.65;
-        if (player.speed > 4.3) rate *= 1.6;
+        let rate = 0.85 * (0.3 + 0.7 * closeness) * behavior;
         if (this.opts.civilian) rate *= 0.6;
+        if (this.state === 'suspicious') rate *= 1.35;
         this.suspicion = Math.min(1, this.suspicion + rate * dt);
         if (this.suspicion >= 1) {
           this.memoryT = 3.5;
@@ -111,22 +130,26 @@ export class Guard {
         }
       }
     } else {
-      const decay = this.state === 'suspicious' ? 0.12 : 0.3;
+      const decay = this.state === 'suspicious' ? 0.12 : 0.35;
       this.suspicion = Math.max(0, this.suspicion - decay * dt);
     }
 
     // ---- Hearing ----
-    if (this.state !== 'chase') {
+    if (this.state !== 'chase' && !this.opts.deaf) {
       for (const n of noises) {
         const nd = Math.hypot(n.x - this.x, n.z - this.z);
         let radius = n.radius;
         if (world.segmentBlocked(this.x, this.z, n.x, n.z, 1.55)) radius *= 0.45;
         if (nd >= radius) continue;
-        this.suspicion = Math.min(1, this.suspicion + n.strength);
-        this.investigate = { x: n.x, z: n.z };
-        if (this.suspicion >= SUSPICIOUS_AT && this.state !== 'suspicious') {
-          this.lookT = 0;
-          this.setState('suspicious');
+        this.suspicion = Math.min(1, this.suspicion + n.strength * (ctx.alertBoost > 0 ? 1.4 : 1));
+        // Only distinctly odd sounds (sprinting, doors, the fridge) are
+        // worth walking over to investigate — office footsteps are normal.
+        if (n.strength >= 0.2) {
+          this.investigate = { x: n.x, z: n.z };
+          if (this.suspicion >= SUSPICIOUS_AT && this.state !== 'suspicious') {
+            this.lookT = 0;
+            this.setState('suspicious');
+          }
         }
       }
     }

@@ -43,6 +43,14 @@ export class RendererSystem {
     this.composer.addPass(new OutputPass());
   }
 
+  /** HIGH: full pixel ratio + bloom. LOW: 1x pixel ratio, no bloom. */
+  setQuality(high: boolean): void {
+    this.renderer.setPixelRatio(high ? Math.min(window.devicePixelRatio, 2) : 1);
+    if (this.bloom) this.bloom.enabled = high;
+    this.renderer.setSize(window.innerWidth, window.innerHeight);
+    this.composer?.setSize(window.innerWidth, window.innerHeight);
+  }
+
   setSize(width: number, height: number): void {
     this.renderer.setSize(width, height);
     this.composer?.setSize(width, height);

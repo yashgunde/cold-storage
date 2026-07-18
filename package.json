@@ -8,7 +8,8 @@
     "dev": "vite",
     "typecheck": "tsc --noEmit",
     "build": "tsc --noEmit && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "play": "vite preview --port 4173 --strictPort --open"
   },
   "dependencies": {
     "three": "^0.185.1"

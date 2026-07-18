@@ -49,6 +49,8 @@ export interface LevelDef {
   cameras?: CameraDef[];
   lasers?: LaserDef[];
   notes?: NoteDef[];
+  /** Zones [cx, cz, w, d] where being SEEN is trespassing. */
+  restricted?: Array<[number, number, number, number]>;
   lights: Array<[number, number]>;
   windowsSide?: 'N' | 'S' | null;
   fridge: { x: number; z: number };
@@ -108,7 +110,15 @@ export class SecurityCamera {
   }
 
   /** Returns true exactly on the frame the camera flags the player. */
-  update(dt: number, px: number, pz: number, crouching: boolean, world: CollisionWorld): boolean {
+  update(
+    dt: number,
+    px: number,
+    pz: number,
+    crouching: boolean,
+    world: CollisionWorld,
+    /** Cameras also ignore colleagues walking normally in public areas. */
+    behaviorActive: boolean
+  ): boolean {
     this.cooldown = Math.max(0, this.cooldown - dt);
     this.sweepT += dt;
     const arc = this.def.arc ?? 0.7;
@@ -120,7 +130,7 @@ export class SecurityCamera {
     const dz = pz - this.def.z;
     const dist = Math.hypot(dx, dz);
     let sees = false;
-    if (dist < range) {
+    if (behaviorActive && dist < range) {
       const fx = -Math.sin(angle);
       const fz = -Math.cos(angle);
       const dot = (dx * fx + dz * fz) / (dist || 1);

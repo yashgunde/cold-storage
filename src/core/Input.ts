@@ -19,7 +19,7 @@ export class Input {
       if (e.repeat) return;
       this.down.add(e.code);
       this.pressed.add(e.code);
-      if (e.code === 'Tab' || e.code === 'Space') e.preventDefault();
+      if (e.code === 'Tab' || e.code === 'Space' || e.code.startsWith('Arrow')) e.preventDefault();
     });
     window.addEventListener('keyup', (e) => this.down.delete(e.code));
     window.addEventListener('blur', () => this.down.clear());

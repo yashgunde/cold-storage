@@ -37,14 +37,16 @@ export class FootstepEmitter {
     x: number,
     z: number,
     noise: NoiseSystem
-  ): void {
+  ): boolean {
     this.travelled += speed * dt;
     const stepLength = crouching ? 1.5 : sprinting ? 2.3 : 2.0;
-    if (this.travelled < stepLength) return;
+    if (this.travelled < stepLength) return false;
     this.travelled = 0;
-    if (speed < 0.3) return;
-    if (crouching) noise.emit(x, z, 2.2, 0.12);
-    else if (sprinting) noise.emit(x, z, 13, 0.5);
-    else noise.emit(x, z, 6.5, 0.28);
+    if (speed < 0.3) return false;
+    // Walking is normal office noise — guards barely register it.
+    if (crouching) noise.emit(x, z, 1.8, 0.05);
+    else if (sprinting) noise.emit(x, z, 13, 0.45);
+    else noise.emit(x, z, 4.5, 0.08);
+    return true;
   }
 }
