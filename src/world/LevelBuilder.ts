@@ -15,6 +15,104 @@ const seeded = (x: number, z: number) => {
   };
 };
 
+/**
+ * A different unsettling little ink drawing per `kind`, scrawled on aged
+ * paper — these sit on the top face of collectible notes so each memo
+ * reads like someone's paranoid marginalia. A fresh texture every call
+ * (notes are disposed with their level, so no cross-level caching).
+ */
+function noteDrawing(kind: number): THREE.CanvasTexture {
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = 256;
+  const c = cv.getContext('2d')!;
+  c.fillStyle = '#e7e0cb';
+  c.fillRect(0, 0, 256, 256);
+  for (let i = 0; i < 6; i++) {
+    c.fillStyle = `rgba(120,96,60,${(0.03 + Math.random() * 0.05).toFixed(3)})`;
+    c.beginPath();
+    c.arc(Math.random() * 256, Math.random() * 256, 18 + Math.random() * 50, 0, 7);
+    c.fill();
+  }
+  c.strokeStyle = '#211a10';
+  c.fillStyle = '#211a10';
+  c.lineWidth = 2.4;
+  c.lineJoin = 'round';
+  c.lineCap = 'round';
+  // Wobbly hand-drawn segment.
+  const ln = (x0: number, y0: number, x1: number, y1: number): void => {
+    c.beginPath();
+    const seg = 6;
+    for (let i = 0; i <= seg; i++) {
+      const t = i / seg;
+      const x = x0 + (x1 - x0) * t + (Math.random() - 0.5) * 3;
+      const y = y0 + (y1 - y0) * t + (Math.random() - 0.5) * 3;
+      if (i) c.lineTo(x, y);
+      else c.moveTo(x, y);
+    }
+    c.stroke();
+  };
+  const cx = 128;
+  const cy = 132;
+  const TAU = Math.PI * 2;
+  switch (((kind % 6) + 6) % 6) {
+    case 0: { // all-seeing eye in a triangle with rays
+      ln(cx, 48, 46, 196); ln(46, 196, 210, 196); ln(210, 196, cx, 48);
+      c.beginPath(); c.ellipse(cx, 142, 44, 23, 0, 0, TAU); c.stroke();
+      c.beginPath(); c.arc(cx, 142, 10, 0, TAU); c.fill();
+      for (let a = 0; a < 10; a++) { const an = (a / 10) * TAU; ln(cx + Math.cos(an) * 62, 66 + Math.sin(an) * 6, cx + Math.cos(an) * 84, 60 + Math.sin(an) * 6); }
+      break;
+    }
+    case 1: { // spiral with scrawled runes
+      c.beginPath();
+      for (let t = 0; t < 52; t++) { const r = t * 2.3; const a = t * 0.5; const x = cx + Math.cos(a) * r; const y = cy + Math.sin(a) * r; if (t) c.lineTo(x, y); else c.moveTo(x, y); }
+      c.stroke();
+      c.font = '20px serif';
+      const runes = ['↯', '⌇', '☓', 'ϟ', '⍟', 'ᛝ', '⋔'];
+      for (let i = 0; i < 7; i++) { const a = (i / 7) * TAU; c.fillText(runes[i], cx + Math.cos(a) * 108 - 8, cy + Math.sin(a) * 108 + 6); }
+      break;
+    }
+    case 2: { // crowned sandwich + "1987", radiating
+      ln(70, 172, 186, 172); ln(70, 172, 128, 90); ln(186, 172, 128, 90);
+      ln(86, 152, 170, 152);
+      ln(104, 90, 104, 66); ln(104, 66, 116, 80); ln(116, 80, 128, 60); ln(128, 60, 140, 80); ln(140, 80, 152, 66); ln(152, 66, 152, 90);
+      c.font = 'bold 22px serif'; c.fillText('1987', 98, 210);
+      for (let a = 0; a < 8; a++) { const an = (a / 8) * TAU; ln(128 + Math.cos(an) * 92, 128 + Math.sin(an) * 92, 128 + Math.cos(an) * 112, 128 + Math.sin(an) * 112); }
+      break;
+    }
+    case 3: { // orbit / occult chart
+      for (const r of [28, 56, 86, 112]) { c.beginPath(); c.arc(cx, cy, r, 0, TAU); c.stroke(); }
+      c.beginPath(); c.arc(cx, cy, 7, 0, TAU); c.fill();
+      const rings = [28, 56, 86, 112, 86];
+      for (let i = 0; i < 5; i++) { const a = (i / 5) * TAU + 0.4; const r = rings[i]; const x = cx + Math.cos(a) * r; const y = cy + Math.sin(a) * r; c.beginPath(); c.arc(x, y, 5, 0, TAU); c.fill(); ln(cx, cy, x, y); }
+      break;
+    }
+    case 4: { // a hand with an eye in the palm
+      c.beginPath(); c.ellipse(cx, 154, 32, 40, 0, 0, TAU); c.stroke();
+      for (let i = -2; i <= 2; i++) ln(cx + i * 14, 116, cx + i * 16, 70);
+      ln(cx - 32, 150, cx - 54, 132);
+      c.beginPath(); c.ellipse(cx, 156, 15, 8, 0, 0, TAU); c.stroke();
+      c.beginPath(); c.arc(cx, 156, 4, 0, TAU); c.fill();
+      break;
+    }
+    default: { // arrows converging on a dot + a whispered word
+      c.beginPath(); c.arc(cx, cy, 8, 0, TAU); c.fill();
+      for (let a = 0; a < 10; a++) {
+        const an = (a / 10) * TAU;
+        const x = cx + Math.cos(an) * 100; const y = cy + Math.sin(an) * 100;
+        const hx = cx + Math.cos(an) * 26; const hy = cy + Math.sin(an) * 26;
+        ln(x, y, hx, hy);
+        ln(hx, hy, hx + Math.cos(an + 2.5) * 12, hy + Math.sin(an + 2.5) * 12);
+        ln(hx, hy, hx + Math.cos(an - 2.5) * 12, hy + Math.sin(an - 2.5) * 12);
+      }
+      c.font = 'italic 16px serif'; c.fillText('feed it. feed it.', 60, 28);
+      break;
+    }
+  }
+  const tex = new THREE.CanvasTexture(cv);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
 export interface LevelPalette {
   wall: number;
   accent: number;
@@ -499,20 +597,33 @@ export function buildLevel(def: LevelDef, world: CollisionWorld): BuiltLevel {
     root.add(grp);
   };
 
-  // ---- Desks: slab + monitor + chair + seeded clutter ----
-  const MONITOR = 0x23262c;
+  // ---- Desks: slab + glowing monitor + chair + seeded clutter ----
+  // Four shared screen materials (emissive = "powered on") keep the many
+  // monitors from each minting a unique material.
+  const screenGeo = new THREE.PlaneGeometry(0.5, 0.31);
+  const screenMats = [0x38507a, 0x2b6b5e, 0x5a4a86, 0x6a5330].map(
+    (c) => new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: 0.85, roughness: 0.3 })
+  );
   for (const [x, z] of def.desks ?? []) {
     addSolid(x, z, 1.8, 0.78, 0.9, 0x9c8d74);
-    const mon = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.34, 0.06), material(MONITOR, 0.4));
-    mon.position.set(x, 1.04, z - 0.28);
-    mon.castShadow = true;
-    root.add(mon);
-    const monBase = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.09, 0.12), material(MONITOR, 0.4));
-    monBase.position.set(x, 0.82, z - 0.28);
-    root.add(monBase);
+    const rand = seeded(x, z);
+    // Monitor: slim dark bezel + a glowing screen facing the chair, on a
+    // neck-and-foot stand.
+    const bezel = new THREE.Mesh(new THREE.BoxGeometry(0.56, 0.37, 0.04), material(0x14161b, 0.5));
+    bezel.position.set(x, 1.06, z - 0.28);
+    bezel.castShadow = true;
+    root.add(bezel);
+    const screen = new THREE.Mesh(screenGeo, screenMats[Math.floor(rand() * 4)]);
+    screen.position.set(x, 1.06, z - 0.28 + 0.022);
+    root.add(screen);
+    const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.022, 0.13, 8), material(0x2a2e35, 0.4));
+    neck.position.set(x, 0.86, z - 0.28);
+    root.add(neck);
+    const foot = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.12, 0.02, 14), material(0x2a2e35, 0.4));
+    foot.position.set(x, 0.795, z - 0.28);
+    root.add(foot);
     chair(x, z + 0.85, Math.PI);
 
-    const rand = seeded(x, z);
     const clutterY = 0.79;
     const kb = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.02, 0.13), material(0x2a2e35, 0.6));
     kb.position.set(x + (rand() - 0.5) * 0.2, clutterY, z + 0.05);
@@ -551,18 +662,36 @@ export function buildLevel(def: LevelDef, world: CollisionWorld): BuiltLevel {
     const rot = prop.rot ?? 0;
     switch (prop.type) {
       case 'plant': {
-        const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.26, 0.35, 10), material(0x6b4a35, 0.9));
-        pot.position.set(x, 0.175, z);
+        // Tapered pot with a soil disc + a cluster of leaf blobs at varied
+        // greens and angles — reads as a real potted ficus, not a cone.
+        const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.21, 0.16, 0.38, 12), material(0x7a5238, 0.85));
+        pot.position.set(x, 0.19, z);
         pot.castShadow = true;
         root.add(pot);
-        const leaf = new THREE.Mesh(new THREE.ConeGeometry(0.42, 0.9, 8), material(0x3f7a4a, 0.9));
-        leaf.position.set(x, 0.85, z);
-        leaf.castShadow = true;
-        root.add(leaf);
-        const leaf2 = new THREE.Mesh(new THREE.ConeGeometry(0.3, 0.7, 8), material(0x4b8c56, 0.9));
-        leaf2.position.set(x, 1.25, z);
-        leaf2.castShadow = true;
-        root.add(leaf2);
+        const rim = new THREE.Mesh(new THREE.CylinderGeometry(0.225, 0.225, 0.05, 12), material(0x8a5f42, 0.8));
+        rim.position.set(x, 0.37, z);
+        root.add(rim);
+        const soil = new THREE.Mesh(new THREE.CylinderGeometry(0.19, 0.19, 0.03, 12), material(0x2e2218, 0.95));
+        soil.position.set(x, 0.39, z);
+        root.add(soil);
+        const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.04, 0.4, 6), material(0x5a4327, 0.9));
+        trunk.position.set(x, 0.58, z);
+        root.add(trunk);
+        const rand = seeded(x, z);
+        const blobGeo = new THREE.IcosahedronGeometry(0.26, 0);
+        for (let i = 0; i < 7; i++) {
+          const blob = new THREE.Mesh(
+            blobGeo,
+            material([0x2f6b3e, 0x3f7a4a, 0x4b8c56, 0x5c9a5f][Math.floor(rand() * 4)], 0.9)
+          );
+          const a = rand() * Math.PI * 2;
+          const rr = rand() * 0.22;
+          blob.position.set(x + Math.cos(a) * rr, 0.86 + rand() * 0.46, z + Math.sin(a) * rr);
+          blob.scale.setScalar(0.6 + rand() * 0.7);
+          blob.rotation.set(rand() * 3, rand() * 3, rand() * 3);
+          blob.castShadow = true;
+          root.add(blob);
+        }
         world.addBox(x, z, 0.5, 0.5, { height: 0.6 });
         break;
       }
@@ -781,39 +910,85 @@ export function buildLevel(def: LevelDef, world: CollisionWorld): BuiltLevel {
   for (const d of def.doors) addDoorEntity(d);
 
   // ---- Keycards ----
+  // A proper access badge: emissive card body + a dark magnetic stripe, a
+  // gold chip, and a clip nub. Children ride the card so the whole thing
+  // still hovers/spins as one collectible.
   const keycards: BuiltKeycard[] = def.keycards.map((kc) => {
     const mesh = new THREE.Mesh(
-      new THREE.BoxGeometry(0.3, 0.035, 0.2),
+      new THREE.BoxGeometry(0.3, 0.02, 0.2),
       new THREE.MeshStandardMaterial({
         color: kc.color,
         emissive: kc.color,
-        emissiveIntensity: 0.55,
+        emissiveIntensity: 0.5,
         roughness: 0.4
       })
     );
     mesh.position.set(kc.x, kc.y ?? 0.81, kc.z);
+    const stripe = new THREE.Mesh(
+      new THREE.BoxGeometry(0.3, 0.006, 0.05),
+      new THREE.MeshStandardMaterial({ color: 0x14161b, roughness: 0.5 })
+    );
+    stripe.position.set(0, 0.012, 0.055);
+    mesh.add(stripe);
+    const chip = new THREE.Mesh(
+      new THREE.BoxGeometry(0.05, 0.008, 0.04),
+      new THREE.MeshStandardMaterial({ color: 0xd9b45a, metalness: 0.7, roughness: 0.35 })
+    );
+    chip.position.set(-0.09, 0.012, -0.04);
+    mesh.add(chip);
+    const clip = new THREE.Mesh(
+      new THREE.BoxGeometry(0.04, 0.03, 0.02),
+      new THREE.MeshStandardMaterial({ color: 0x9aa0a8, metalness: 0.6, roughness: 0.4 })
+    );
+    clip.position.set(0.13, 0.01, 0);
+    mesh.add(clip);
     root.add(mesh);
     return { id: kc.id, x: kc.x, z: kc.z, mesh };
   });
 
-  // ---- Notes (collectible memos) ----
-  const noteMat = new THREE.MeshStandardMaterial({
-    color: 0xf2df7a,
-    emissive: 0x8a7b22,
-    emissiveIntensity: 0.35,
-    roughness: 0.8
+  // ---- Notes (collectible memos): aged paper with a hand-scrawled weird
+  // drawing on the top face; a faint warm emissive keeps them findable. ----
+  const paperEdgeMat = new THREE.MeshStandardMaterial({
+    color: 0xe7e0cb,
+    roughness: 0.9,
+    emissive: 0x3a3320,
+    emissiveIntensity: 0.2
   });
-  const notes: BuiltNote[] = (def.notes ?? []).map((n) => {
-    const mesh = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.015, 0.24), noteMat.clone());
+  const noteGeo = new THREE.BoxGeometry(0.26, 0.012, 0.26);
+  const notes: BuiltNote[] = (def.notes ?? []).map((n, i) => {
+    const topMat = new THREE.MeshStandardMaterial({
+      map: noteDrawing(i),
+      roughness: 0.85,
+      emissive: 0x3a3320,
+      emissiveIntensity: 0.2
+    });
+    // BoxGeometry face order is +x,-x,+y,-y,+z,-z → index 2 is the top face.
+    const mats = [paperEdgeMat, paperEdgeMat, topMat, paperEdgeMat, paperEdgeMat, paperEdgeMat];
+    const mesh = new THREE.Mesh(noteGeo, mats);
     mesh.position.set(n.x, n.y ?? 0.8, n.z);
     mesh.rotation.y = Math.random() * Math.PI;
     root.add(mesh);
     return { def: n, mesh, read: false };
   });
 
-  // ---- Fridge ----
+  // ---- Fridge: body + two-door seam + tall chrome handles ----
   const fridge = addSolid(def.fridge.x, def.fridge.z, 0.9, 1.95, 1.05, 0xf2f4f5, { roughness: 0.35 });
   (fridge.material as THREE.MeshStandardMaterial).metalness = 0.25;
+  {
+    const fx = def.fridge.x;
+    const fz = def.fridge.z;
+    const front = fz + 0.53;
+    const seam = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.02, 0.02), material(0xbfc4c8, 0.5));
+    seam.position.set(fx, 1.15, front);
+    root.add(seam);
+    const handleMat = new THREE.MeshStandardMaterial({ color: 0x9aa0a8, metalness: 0.8, roughness: 0.3 });
+    const upper = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.5, 0.05), handleMat);
+    upper.position.set(fx + 0.28, 1.5, front + 0.02);
+    root.add(upper);
+    const lower = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.7, 0.05), handleMat);
+    lower.position.set(fx + 0.28, 0.62, front + 0.02);
+    root.add(lower);
+  }
 
   // ---- Exit(s) ----
   const addExit = (zone: Zone, color: number) => {
