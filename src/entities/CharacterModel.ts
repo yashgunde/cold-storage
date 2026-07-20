@@ -32,6 +32,11 @@ let template: THREE.Object3D | null = null;
 let clips: THREE.AnimationClip[] = [];
 let normScale = 1;
 let footOffset = 0;
+// Resolved per-model so we work whether clips are named Walk/Run or
+// Walking/Running (Soldier vs RobotExpressive, etc.).
+let idleClip = '';
+let walkClip = '';
+let runClip = '';
 
 /** Load the shared character model once. Failure is silent — guards then
  *  keep using the primitive fallback. */
@@ -43,6 +48,10 @@ export async function preloadCharacterModel(url: string): Promise<void> {
     normScale = TARGET_HEIGHT / h;
     footOffset = -box.min.y * normScale;
     clips = gltf.animations;
+    const names = clips.map((c) => c.name);
+    idleClip = names.find((n) => /idle/i.test(n)) ?? names[0] ?? '';
+    walkClip = names.find((n) => /walk/i.test(n) && !/jump/i.test(n)) ?? idleClip;
+    runClip = names.find((n) => /run/i.test(n)) ?? walkClip;
     template = gltf.scene;
   } catch {
     template = null;
@@ -101,7 +110,7 @@ export class CharacterModel implements Figure {
 
     this.mixer = new THREE.AnimationMixer(model);
     for (const clip of clips) this.actions.set(clip.name, this.mixer.clipAction(clip));
-    this.play('Idle');
+    this.play(idleClip);
 
     qTex ??= indicatorTexture('?', '#ffc53d');
     aTex ??= indicatorTexture('!', '#ff5d5d');
@@ -134,7 +143,7 @@ export class CharacterModel implements Figure {
 
   animate(dt: number, speed: number): void {
     this.mixer.update(dt);
-    this.play(speed > 3.6 ? 'Running' : speed > 0.25 ? 'Walking' : 'Idle');
+    this.play(speed > 3.6 ? runClip : speed > 0.25 ? walkClip : idleClip);
   }
 
   setIndicator(state: IndicatorState): void {

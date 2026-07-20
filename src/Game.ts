@@ -119,7 +119,7 @@ export class Game {
 
     // Start loading the rigged/animated guard model; guards use it once
     // ready and fall back to primitive figures until then.
-    void preloadCharacterModel(`${import.meta.env.BASE_URL}models/RobotExpressive.glb`);
+    void preloadCharacterModel(`${import.meta.env.BASE_URL}models/Soldier.glb`);
 
     try {
       const raw = localStorage.getItem(SAVE_KEY);
