@@ -1,4 +1,5 @@
 import { CharacterFigure } from './CharacterFigure';
+import { CharacterModel, isCharacterModelReady, type Figure } from './CharacterModel';
 import type { CollisionWorld } from '../world/Collision';
 import type { NavGrid } from '../systems/NavGrid';
 import type { NoiseEvent } from '../systems/Stealth';
@@ -50,7 +51,7 @@ export class Guard {
   travel = 0;
   /** Injected by Game after the level's collision world is final. */
   nav: NavGrid | null = null;
-  readonly figure: CharacterFigure;
+  readonly figure: Figure;
   onStateChange?: (g: Guard, from: GuardState, to: GuardState) => void;
 
   private wp = 0;
@@ -80,11 +81,11 @@ export class Guard {
     let seed = 0;
     for (let i = 0; i < opts.name.length; i++) seed = (seed * 31 + opts.name.charCodeAt(i)) | 0;
     seed = seed >>> 0;
-    this.figure = new CharacterFigure(
-      opts.civilian
-        ? { shirt: opts.shirt ?? 0x7c9c6b, pants: opts.pants ?? 0x4a4640, seed }
-        : { shirt: opts.shirt ?? 0x2c3a55, pants: opts.pants ?? 0x1f2733, cap: 0x22293a, seed }
-    );
+    const figOpts = opts.civilian
+      ? { shirt: opts.shirt ?? 0x7c9c6b, pants: opts.pants ?? 0x4a4640, seed }
+      : { shirt: opts.shirt ?? 0x2c3a55, pants: opts.pants ?? 0x1f2733, cap: 0x22293a, seed };
+    // Real rigged/animated model when it has loaded; primitive fallback until then.
+    this.figure = isCharacterModelReady() ? new CharacterModel(figOpts) : new CharacterFigure(figOpts);
     this.figure.setPosition(this.x, this.z);
   }
 

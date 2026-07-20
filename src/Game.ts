@@ -10,6 +10,8 @@ import { Guard, type GuardState, type GuardSenseCtx } from './entities/Guard';
 import { FootstepEmitter, NoiseSystem } from './systems/Stealth';
 import { NavGrid } from './systems/NavGrid';
 import { MusicPlayer } from './core/MusicPlayer';
+import { preloadCharacterModel } from './entities/CharacterModel';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { InteractSystem } from './systems/Interact';
 import { HUD } from './ui/HUD';
 
@@ -106,6 +108,18 @@ export class Game {
     this.input = new Input(this.rendererSystem.renderer.domElement);
     this.player = new PlayerController(this.camera);
     this.rendererSystem.initPost(this.scene, this.camera);
+
+    // Image-based lighting: a procedural room env map so every material
+    // catches soft reflections/fill — a big fidelity jump with no assets.
+    // environmentIntensity keeps it subtle so the level lights still lead.
+    const pmrem = new THREE.PMREMGenerator(this.rendererSystem.renderer);
+    this.scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+    this.scene.environmentIntensity = 0.4;
+    pmrem.dispose();
+
+    // Start loading the rigged/animated guard model; guards use it once
+    // ready and fall back to primitive figures until then.
+    void preloadCharacterModel(`${import.meta.env.BASE_URL}models/RobotExpressive.glb`);
 
     try {
       const raw = localStorage.getItem(SAVE_KEY);
