@@ -7,6 +7,7 @@ import { RendererSystem } from './render/RendererSystem';
 import { buildLevel, type BuiltLevel } from './world/LevelBuilder';
 import { LEVELS, ENDING_CEO, ENDING_LUNCH } from './world/levels';
 import { Guard, type GuardState, type GuardSenseCtx } from './entities/Guard';
+import { Distraction } from './entities/Distraction';
 import { FootstepEmitter, NoiseSystem } from './systems/Stealth';
 import { NavGrid } from './systems/NavGrid';
 import { MusicPlayer } from './core/MusicPlayer';
@@ -65,6 +66,10 @@ export class Game {
   private readonly music = new MusicPlayer();
   private readonly footsteps = new FootstepEmitter();
   private readonly interact = new InteractSystem();
+
+  /** Throwable distractions: count remaining this level + live projectiles. */
+  private throwsLeft = 0;
+  private distractions: Distraction[] = [];
 
   private readonly fpsEl = document.getElementById('fps')!;
   private readonly lockOverlay = document.getElementById('lock-overlay')!;
@@ -317,6 +322,11 @@ export class Game {
     this.player.spawnAt(def.spawn.x, def.spawn.z, def.spawn.yaw);
     this.player.crouching = false;
 
+    // Reset throwable distractions for the new floor.
+    for (const d of this.distractions) this.scene.remove(d.mesh);
+    this.distractions = [];
+    this.throwsLeft = 3;
+
     for (const gdef of def.guards) {
       const g = new Guard(gdef);
       g.onStateChange = (guard, _from, to) => this.onGuardState(guard, to);
@@ -532,6 +542,36 @@ export class Game {
    * per-level textures, and the sun's shadow map. Sprite indicator
    * textures are shared module singletons and are deliberately kept.
    */
+  /** Lob a distraction can in the look direction; it lures guards on impact. */
+  private throwDistraction(): void {
+    if (this.throwsLeft <= 0) {
+      this.hud.toast('Nothing left to throw.', 1400);
+      return;
+    }
+    this.throwsLeft--;
+    const px = this.player.position.x;
+    const pz = this.player.position.z;
+    const yaw = this.player.yaw;
+    // yaw=0 faces -Z, matching PlayerController's move axes.
+    const dirx = -Math.sin(yaw);
+    const dirz = -Math.cos(yaw);
+    // Land where the throw first meets a wall, up to 9 m ahead.
+    let dist = 9;
+    for (let d = 1.5; d <= 9; d += 0.5) {
+      if (this.world.segmentBlocked(px, pz, px + dirx * d, pz + dirz * d, 0.4)) {
+        dist = Math.max(1.2, d - 0.6);
+        break;
+      }
+    }
+    const from = new THREE.Vector3(px, 1.5, pz);
+    const to = new THREE.Vector3(px + dirx * dist, 0.08, pz + dirz * dist);
+    const proj = new Distraction(from, to, Math.max(0.35, dist * 0.06), 1.1);
+    this.scene.add(proj.mesh);
+    this.distractions.push(proj);
+    this.audio.uiClick();
+    this.hud.toast(`Distraction thrown — ${this.throwsLeft} left.`, 1300);
+  }
+
   private disposeLevel(root: THREE.Object3D): void {
     root.traverse((obj) => {
       if ((obj as THREE.Sprite).isSprite) {
@@ -646,6 +686,17 @@ export class Game {
         this.footsteps.update(dt, this.player.speed, this.player.crouching, this.player.sprinting, px, pz, this.noise)
       ) {
         this.audio.step(this.player.crouching);
+      }
+
+      // Throwable distraction: lob a can to lure guards toward a noise
+      // somewhere other than where you actually are. Emitted before the
+      // drain below so a landing this frame is heard this frame.
+      if (active && this.input.wasPressed('KeyQ')) this.throwDistraction();
+      for (const d of this.distractions) {
+        if (d.update(dt)) {
+          this.noise.emit(d.mesh.position.x, d.mesh.position.z, 16, 0.5);
+          if (active) this.audio.step(false, 0.5);
+        }
       }
 
       const senseCtx: GuardSenseCtx = { alertBoost: this.alertBoost, restricted, lunch: this.hasLunch, hidden };
