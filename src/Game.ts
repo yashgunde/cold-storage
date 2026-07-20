@@ -117,9 +117,14 @@ export class Game {
     this.scene.environmentIntensity = 0.4;
     pmrem.dispose();
 
-    // Start loading the rigged/animated guard model; guards use it once
-    // ready and fall back to primitive figures until then.
-    void preloadCharacterModel(`${import.meta.env.BASE_URL}models/Soldier.glb`);
+    // Guards render as the diverse, stylized CharacterFigure (per-seed skin
+    // tone, hair color/style, tie vs. badge). A single shared GLB can only be
+    // *tinted* per guard, so it produces a clone army — the "Halo soldier"
+    // look we're avoiding. The GLTF path (CharacterModel + isCharacterModelReady)
+    // stays wired but dormant: preload a proper *diverse office-human* model
+    // here to re-enable it. Soldier.glb is intentionally not loaded.
+    // void preloadCharacterModel(`${import.meta.env.BASE_URL}models/Soldier.glb`);
+    void preloadCharacterModel;
 
     try {
       const raw = localStorage.getItem(SAVE_KEY);

@@ -233,6 +233,16 @@ export class CharacterFigure {
     this.indicator.scale.setScalar(0.5);
     this.indicator.visible = false;
     this.root.add(this.indicator);
+
+    // ---- Per-character build: subtle height + girth variety so figures read
+    // as distinct people, not one silhouette recolored. x and z scale together
+    // (uniform girth) so yaw rotation stays shear-free; the indicator, a child
+    // of root, rides up with taller figures automatically.
+    // Unsigned shift (>>>): seed is a full uint32, so a signed >> would go
+    // negative for high-bit seeds and push scale below the intended band.
+    const height = 0.94 + ((seed >>> 9) % 5) * 0.03; // 0.94–1.06
+    const build = 0.93 + ((seed >>> 12) % 4) * 0.045; // 0.93–1.065
+    this.root.scale.set(build, height, build);
   }
 
   setPosition(x: number, z: number): void {
