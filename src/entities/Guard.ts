@@ -1,5 +1,6 @@
 import { CharacterFigure } from './CharacterFigure';
 import type { CollisionWorld } from '../world/Collision';
+import type { NavGrid } from '../systems/NavGrid';
 import type { NoiseEvent } from '../systems/Stealth';
 import type { PlayerController } from './PlayerController';
 
@@ -30,6 +31,8 @@ export interface GuardSenseCtx {
   restricted: boolean;
   /** Player is visibly carrying the contraband. */
   lunch: boolean;
+  /** Player is tucked into an unlit pocket — effectively invisible. */
+  hidden: boolean;
 }
 
 const lerpAngle = (a: number, b: number, t: number): number => {
@@ -45,6 +48,8 @@ export class Guard {
   suspicion = 0;
   /** Distance walked since Game last consumed it — drives audible footsteps. */
   travel = 0;
+  /** Injected by Game after the level's collision world is final. */
+  nav: NavGrid | null = null;
   readonly figure: CharacterFigure;
   onStateChange?: (g: Guard, from: GuardState, to: GuardState) => void;
 
@@ -55,6 +60,14 @@ export class Guard {
   private memoryT = 0;
   private investigate = { x: 0, z: 0 };
   private lastSeen = { x: 0, z: 0 };
+  private path: Array<[number, number]> | null = null;
+  private pathI = 0;
+  private pathGoalX = 0;
+  private pathGoalZ = 0;
+  private repathCd = 0;
+  private stuckT = 0;
+  private lastX = 0;
+  private lastZ = 0;
 
   readonly opts: GuardOpts;
 
@@ -102,7 +115,9 @@ export class Guard {
     let behavior = 0;
     if (ctx.lunch) behavior = Math.max(behavior, 1.3);
     if (ctx.restricted) behavior = Math.max(behavior, 1.15);
-    if (player.sprinting || player.speed > 4.3) behavior = Math.max(behavior, 0.85);
+    // Sprinting through an office is more alarming than trespassing —
+    // nobody runs indoors unless something is very wrong.
+    if (player.sprinting || player.speed > 4.3) behavior = Math.max(behavior, 1.25);
     else if (player.crouching) behavior = Math.max(behavior, 0.7);
     if (this.state === 'chase' || this.state === 'suspicious') behavior = Math.max(behavior, 0.6);
 
@@ -121,6 +136,9 @@ export class Guard {
     if (!sees && behavior > 0 && dist < 1.5 && !world.segmentBlocked(this.x, this.z, px, pz, sightMinH)) {
       sees = true;
     }
+    // Shadow concealment: inside an unlit pocket the player reads as
+    // office furniture unless the guard is close enough to touch them.
+    if (ctx.hidden && dist > 2.2) sees = false;
 
     if (sees && behavior > 0) {
       this.lastSeen.x = px;
@@ -182,7 +200,7 @@ export class Guard {
         break;
       }
       case 'suspicious': {
-        if (this.moveToward(this.investigate.x, this.investigate.z, 2.3, dt, world)) {
+        if (this.moveToward(this.investigate.x, this.investigate.z, 2.45, dt, world)) {
           this.lookT += dt;
           this.heading += Math.sin(this.lookT * 1.7) * 1.2 * dt;
           if (this.lookT > 3.2) {
@@ -197,7 +215,9 @@ export class Guard {
         else this.memoryT -= dt;
         const tx = sees ? px : this.lastSeen.x;
         const tz = sees ? pz : this.lastSeen.z;
-        this.moveToward(tx, tz, 4.3, dt, world);
+        // Faster than a tired sprinter, slower than a fresh one: the
+        // player can gain ground only while their stamina lasts.
+        this.moveToward(tx, tz, 4.75, dt, world);
         if (dist < CAPTURE_DIST) onCaught(this);
         if (this.memoryT <= 0) {
           this.suspicion = 0.85;
@@ -223,19 +243,69 @@ export class Guard {
     );
   }
 
-  /** Walk toward a point; returns true when arrived. */
+  /** True while the guard is actually walking (drives door auto-open). */
+  get moving(): boolean {
+    return this.speedNow > 0.1;
+  }
+
+  /**
+   * Walk toward a point, routing around obstacles via the nav grid.
+   * Returns true when arrived.
+   */
   private moveToward(tx: number, tz: number, speed: number, dt: number, world: CollisionWorld): boolean {
-    const dx = tx - this.x;
-    const dz = tz - this.z;
-    const d = Math.hypot(dx, dz);
-    if (d < 0.25) {
+    const d = Math.hypot(tx - this.x, tz - this.z);
+    if (d < 0.3) {
       this.speedNow = 0;
+      this.path = null;
       return true;
     }
+    this.repathCd -= dt;
+
+    // Stuck watchdog: commanded to move but going nowhere → replan.
+    this.stuckT += dt;
+    if (this.stuckT > 0.7) {
+      if (this.speedNow > 0.4 && Math.hypot(this.x - this.lastX, this.z - this.lastZ) < 0.15) {
+        this.path = null;
+        this.repathCd = 0;
+      }
+      this.lastX = this.x;
+      this.lastZ = this.z;
+      this.stuckT = 0;
+    }
+
+    if (this.nav && this.repathCd <= 0) {
+      const goalMoved = Math.hypot(tx - this.pathGoalX, tz - this.pathGoalZ) > 1.1;
+      if (!this.path || goalMoved) {
+        this.repathCd = 0.4;
+        this.pathGoalX = tx;
+        this.pathGoalZ = tz;
+        this.path = this.nav.walkableLine(this.x, this.z, tx, tz)
+          ? null // beeline is clear — no plan needed
+          : this.nav.findPath(this.x, this.z, tx, tz);
+        this.pathI = 0;
+      }
+    }
+
+    let sx = tx;
+    let sz = tz;
+    if (this.path) {
+      while (
+        this.pathI < this.path.length &&
+        Math.hypot(this.path[this.pathI][0] - this.x, this.path[this.pathI][1] - this.z) < 0.35
+      ) {
+        this.pathI++;
+      }
+      if (this.pathI < this.path.length) [sx, sz] = this.path[this.pathI];
+      else this.path = null;
+    }
+
+    const dx = sx - this.x;
+    const dz = sz - this.z;
+    const sd = Math.hypot(dx, dz) || 1;
     this.heading = lerpAngle(this.heading, Math.atan2(-dx, -dz), Math.min(1, dt * 7));
-    const nx = this.x + (dx / d) * speed * dt;
-    const nz = this.z + (dz / d) * speed * dt;
-    [this.x, this.z] = world.resolveCircle(nx, nz, 0.32);
+    const [nx, nz] = world.resolveCircle(this.x + (dx / sd) * speed * dt, this.z + (dz / sd) * speed * dt, 0.32);
+    this.x = nx;
+    this.z = nz;
     this.speedNow = speed;
     this.travel += speed * dt;
     return false;

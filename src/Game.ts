@@ -8,6 +8,7 @@ import { buildLevel, type BuiltLevel } from './world/LevelBuilder';
 import { LEVELS, ENDING_CEO, ENDING_LUNCH } from './world/levels';
 import { Guard, type GuardState, type GuardSenseCtx } from './entities/Guard';
 import { FootstepEmitter, NoiseSystem } from './systems/Stealth';
+import { NavGrid } from './systems/NavGrid';
 import { InteractSystem } from './systems/Interact';
 import { HUD } from './ui/HUD';
 
@@ -71,6 +72,7 @@ export class Game {
 
   private alertBoost = 0;
   private lockdown = false;
+  private nav: NavGrid | null = null;
   /** Bumped on every level load / menu return; invalidates stale timers. */
   private session = 0;
   private stats = { time: 0, spotted: 0, notes: 0 };
@@ -293,6 +295,13 @@ export class Game {
       this.guards.push(g);
     }
 
+    // Guard pathfinding: one grid per level, doors excluded from the static
+    // layer (guards open them) and re-stamped as they lock/unlock.
+    const [navW, navD] = def.size;
+    this.nav = new NavGrid(this.world, navW, navD, new Set(built.doors.map((d) => d.collider)));
+    this.refreshNavDoors();
+    for (const g of this.guards) g.nav = this.nav;
+
     for (const door of built.doors) {
       this.interact.add({
         x: door.cx,
@@ -301,6 +310,7 @@ export class Game {
         prompt: () => door.promptText(this.inventory),
         act: () => {
           door.interact(this.inventory, (m) => this.hud.toast(m));
+          this.refreshNavDoors(); // an unlocked door opens a route for guards
           this.noise.emit(door.cx, door.cz, 5, 0.2);
           this.audio.uiClick();
         }
@@ -534,6 +544,22 @@ export class Game {
     return false;
   }
 
+  /** Standing in an unlit pocket — guards can't pick you out from 2 m+. */
+  private inShadow(px: number, pz: number): boolean {
+    const zones = LEVELS[this.levelIndex].dark;
+    if (!zones) return false;
+    for (const [cx, cz, w, d] of zones) {
+      if (Math.abs(px - cx) < w / 2 && Math.abs(pz - cz) < d / 2) return true;
+    }
+    return false;
+  }
+
+  /** Re-stamp the nav grid's dynamic layer with the currently-locked doors. */
+  private refreshNavDoors(): void {
+    if (!this.built) return;
+    this.nav?.setDoorCells(this.built.doors.filter((d) => d.locked).map((d) => d.collider));
+  }
+
   private frame(t: number): void {
     const dt = Math.min((t - this.lastT) / 1000 || 0, 0.05);
     this.lastT = t;
@@ -582,6 +608,8 @@ export class Game {
       const px = this.player.position.x;
       const pz = this.player.position.z;
       const restricted = this.inRestricted(px, pz);
+      // Sprinting kicks up enough of a scene that the shadows won't save you.
+      const hidden = this.inShadow(px, pz) && !this.player.sprinting;
       const behaviorActive =
         this.hasLunch || restricted || this.player.crouching || this.player.sprinting;
 
@@ -591,7 +619,7 @@ export class Game {
         this.audio.step(this.player.crouching);
       }
 
-      const senseCtx: GuardSenseCtx = { alertBoost: this.alertBoost, restricted, lunch: this.hasLunch };
+      const senseCtx: GuardSenseCtx = { alertBoost: this.alertBoost, restricted, lunch: this.hasLunch, hidden };
       const noises = this.noise.drain();
       for (const g of this.guards) {
         g.update(dt, this.player, this.world, noises, (gg) => this.onCaught(gg), senseCtx);
@@ -655,6 +683,8 @@ export class Game {
         if (g.state === 'chase') chase = true;
       }
       this.hud.setDetection(maxS, chase);
+      this.hud.setStamina(this.player.stamina, this.player.winded);
+      this.hud.setHidden(hidden && !chase);
 
       // Exit check (finale reroutes to the freight elevator during lockdown).
       if (this.hasLunch && !def.tutorial) {

@@ -32,7 +32,15 @@ export interface LevelPalette {
 }
 
 export interface CameraDef { x: number; z: number; facing: number; arc?: number; range?: number; }
-export interface LaserDef { x0: number; z0: number; x1: number; z1: number; }
+export interface LaserDef {
+  x0: number; z0: number; x1: number; z1: number;
+  /** Sweep amplitude in radians: the far end oscillates ±sweep (rotating beam). */
+  sweep?: number;
+  /** On/off cycle length in seconds; the beam is safe AND dim while off. */
+  blink?: number;
+  /** Motion rate — sweep cycles per second. Default 0.4. */
+  speed?: number;
+}
 export interface NoteDef { x: number; z: number; y?: number; text: string; }
 export interface PropDef {
   type:
@@ -85,6 +93,8 @@ export interface LevelDef {
   notes?: NoteDef[];
   /** Zones [cx, cz, w, d] where being SEEN is trespassing. */
   restricted?: Array<[number, number, number, number]>;
+  /** Unlit pockets [cx, cz, w, d] — stand here and guards can't make you out. */
+  dark?: Array<[number, number, number, number]>;
   lights: Array<[number, number]>;
   windowsSide?: 'N' | 'S' | null;
   fridge: { x: number; z: number };
@@ -188,18 +198,30 @@ export class LaserTrip {
   readonly group = new THREE.Group();
   private cooldown = 0;
   private readonly beamMat: THREE.MeshStandardMaterial;
+  private readonly beam: THREE.Mesh;
+  private readonly len: number;
+  private readonly baseAngle: number;
+  private t = Math.random() * 10; // desync identical grids
+  private live = true;
+  // Current far endpoint (tracks the sweep) — the crossing test uses this,
+  // so a rotating beam is only dangerous where it actually points.
+  private curX1: number;
+  private curZ1: number;
 
   constructor(readonly def: LaserDef) {
-    const len = Math.hypot(def.x1 - def.x0, def.z1 - def.z0);
+    this.len = Math.hypot(def.x1 - def.x0, def.z1 - def.z0);
+    this.baseAngle = Math.atan2(def.x1 - def.x0, def.z1 - def.z0);
+    this.curX1 = def.x1;
+    this.curZ1 = def.z1;
     this.beamMat = new THREE.MeshStandardMaterial({
       color: 0x330508,
       emissive: 0xff2233,
       emissiveIntensity: 2.4,
       roughness: 0.4
     });
-    const beam = new THREE.Mesh(new THREE.BoxGeometry(0.035, 0.035, len), this.beamMat);
-    beam.position.z = len / 2;
-    this.group.add(beam);
+    this.beam = new THREE.Mesh(new THREE.BoxGeometry(0.035, 0.035, this.len), this.beamMat);
+    this.beam.position.z = this.len / 2;
+    this.group.add(this.beam);
     const emitter = new THREE.Mesh(
       new THREE.BoxGeometry(0.12, 0.5, 0.12),
       new THREE.MeshStandardMaterial({ color: 0x1c2027, roughness: 0.5, metalness: 0.5 })
@@ -207,19 +229,32 @@ export class LaserTrip {
     emitter.position.y = -0.25;
     this.group.add(emitter);
     this.group.position.set(def.x0, 0.55, def.z0);
-    this.group.rotation.y = Math.atan2(def.x1 - def.x0, def.z1 - def.z0);
+    this.group.rotation.y = this.baseAngle;
   }
 
   update(dt: number): void {
     this.cooldown = Math.max(0, this.cooldown - dt);
-    this.beamMat.emissiveIntensity = 2.1 + Math.sin(performance.now() * 0.008) * 0.5;
+    this.t += dt;
+    // Sweeping beam: rotate around the emitter and track the live endpoint.
+    if (this.def.sweep) {
+      const angle = this.baseAngle + Math.sin(this.t * (this.def.speed ?? 0.4) * Math.PI * 2) * this.def.sweep;
+      this.group.rotation.y = angle;
+      this.curX1 = this.def.x0 + Math.sin(angle) * this.len;
+      this.curZ1 = this.def.z0 + Math.cos(angle) * this.len;
+    }
+    // Blinking beam: dark (and harmless) for the last 40% of each cycle.
+    if (this.def.blink) {
+      this.live = this.t % this.def.blink < this.def.blink * 0.6;
+      this.beam.visible = this.live;
+    }
+    this.beamMat.emissiveIntensity = this.live ? 2.1 + Math.sin(performance.now() * 0.008) * 0.5 : 0;
   }
 
   crossed(px: number, pz: number, r: number): boolean {
-    if (this.cooldown > 0) return false;
-    const { x0, z0, x1, z1 } = this.def;
-    const dx = x1 - x0;
-    const dz = z1 - z0;
+    if (this.cooldown > 0 || !this.live) return false;
+    const { x0, z0 } = this.def;
+    const dx = this.curX1 - x0;
+    const dz = this.curZ1 - z0;
     const len2 = dx * dx + dz * dz;
     const t = len2 === 0 ? 0 : clamp(((px - x0) * dx + (pz - z0) * dz) / len2, 0, 1);
     const d = Math.hypot(px - (x0 + dx * t), pz - (z0 + dz * t));
@@ -431,6 +466,19 @@ export function buildLevel(def: LevelDef, world: CollisionWorld): BuiltLevel {
   }
   for (const [cx, cz, w, d] of def.partitions ?? []) addSolid(cx, cz, w, 1.35, d, 0x8a8477);
   for (const [x, z] of def.columns ?? []) addSolid(x, z, 0.6, WALL_H, 0.6, p.wall);
+
+  // ---- Shadow pockets: a pool of darkness on the floor marks a hiding
+  // spot. Gameplay treats these as concealment (see Game.inShadow); the
+  // dark decal is the visual tell. Keep level lights away from them. ----
+  for (const [cx, cz, w, d] of def.dark ?? []) {
+    const shade = new THREE.Mesh(
+      new THREE.PlaneGeometry(w, d),
+      new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.62, depthWrite: false })
+    );
+    shade.rotation.x = -Math.PI / 2;
+    shade.position.set(cx, 0.03, cz);
+    root.add(shade);
+  }
 
   // ---- Shared little builders ----
   const chair = (x: number, z: number, rot = 0) => {

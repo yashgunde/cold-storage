@@ -6,6 +6,9 @@ export class HUD {
   private readonly objectiveEl = document.getElementById('objective')!;
   private readonly detectEl = document.getElementById('detect')!;
   private readonly detectFillEl = document.getElementById('detect-fill')!;
+  private readonly staminaEl = document.getElementById('stamina')!;
+  private readonly staminaFillEl = document.getElementById('stamina-fill')!;
+  private readonly hiddenEl = document.getElementById('hidden-tag')!;
   private readonly promptEl = document.getElementById('prompt')!;
   private readonly toastsEl = document.getElementById('toasts')!;
   private readonly keysEl = document.getElementById('keys')!;
@@ -15,6 +18,17 @@ export class HUD {
 
   setObjective(text: string): void {
     this.objectiveEl.textContent = text ? `OBJECTIVE — ${text}` : '';
+  }
+
+  /** Stamina bar: shown only while it matters (not full), amber when winded. */
+  setStamina(v: number, winded: boolean): void {
+    this.staminaEl.style.opacity = v < 0.999 ? '1' : '0';
+    this.staminaFillEl.style.width = `${Math.round(v * 100)}%`;
+    this.staminaFillEl.style.background = winded ? '#ff7043' : '#7dd3fc';
+  }
+
+  setHidden(on: boolean): void {
+    this.hiddenEl.style.opacity = on ? '1' : '0';
   }
 
   setPrompt(text: string | null): void {

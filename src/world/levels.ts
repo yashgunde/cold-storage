@@ -490,13 +490,13 @@ export const LEVELS: LevelDef[] = [
       { x: 18.7, z: 1, facing: PI / 2, arc: 0.5, range: 10 }
     ],
     lasers: [
-      { x0: 12.4, z0: -6, x1: 17, z1: -6 },
+      { x0: 12.4, z0: -6, x1: 17, z1: -6, sweep: 0.5, speed: 0.35 },
       { x0: 14, z0: -1, x1: 18.6, z1: -1 },
-      { x0: 12.4, z0: 4.5, x1: 17, z1: 4.5 },
-      { x0: -18.6, z0: -6, x1: -14, z1: -6 },
+      { x0: 12.4, z0: 4.5, x1: 17, z1: 4.5, sweep: 0.5, speed: 0.42 },
+      { x0: -18.6, z0: -6, x1: -14, z1: -6, sweep: -0.5, speed: 0.35 },
       { x0: -17, z0: -1, x1: -12.4, z1: -1 },
-      { x0: -4, z0: -11.9, x1: -4, z1: -9.1 },
-      { x0: 4, z0: -11.9, x1: 4, z1: -9.1 }
+      { x0: -4, z0: -11.9, x1: -4, z1: -9.1, blink: 3 },
+      { x0: 4, z0: -11.9, x1: 4, z1: -9.1, blink: 3 }
     ],
     notes: [
       { x: -23.4, z: -16.3, text: 'SHIPMENT MANIFEST — "Batch 88: 1 (one) lunch. Destination: wherever the current intern is. Recipe source: DO NOT ASK (1987)."' },
@@ -505,6 +505,7 @@ export const LEVELS: LevelDef[] = [
       { x: 6, z: 1.45, text: 'LAB WHITEBOARD PHOTO — a flowchart from "SANDWICH" to "LOYALTY" with fourteen arrows and no explanations.' }
     ],
     restricted: [[0, -4, 24, 16], [-26, -14, 14, 10], [26, -14, 14, 10]],
+    dark: [[-30, -12.5, 3.5, 3.5], [30, 12, 4, 5]],
     lights: [[0, -7], [0, 6], [-15, -10.5], [15, -10.5], [-26, -14], [26, -14], [-15, 12], [26, 13]],
     windowsSide: 'N',
     fridge: { x: 0, z: -7 },
@@ -518,7 +519,109 @@ export const LEVELS: LevelDef[] = [
   },
 
   // ------------------------------------------------------------------
-  // L5 — COLD STORAGE (finale) — 80 x 44
+  // L5 — THE NIGHT SHIFT — 72 x 40 (geometry cloned from the Bullpen)
+  // ------------------------------------------------------------------
+  {
+    id: 'nightshift',
+    name: 'THE NIGHT SHIFT',
+    floorLabel: 'SUB-LEVEL A · NIGHT SECURITY',
+    briefing: {
+      from: 'Marv — a text message, no contact name, 3:11 AM',
+      lines: [
+        '"You went down instead of up. Good instinct. Sub-Level A is the checkpoint before the vault, and at night they run it dark to save the founder a nickel."',
+        '"That works for you. Where the light doesn\'t reach, neither do their eyes — stand in the black and they walk right past."',
+        '"Silva works the floor deaf — headphones, all night. She won\'t hear a thing. She will SEE everything. And the corridor scanners move now; watch the rhythm before you commit."',
+        '"GREEN badge, on a desk as always. Take the night lunch from the guards\' own fridge. Pettiness is a ladder. — M."'
+      ]
+    },
+    palette: {
+      wall: 0x3f4453, accent: 0x9be7c4, trim: 0x2a2f3b,
+      carpetA: '#33373f', carpetB: '#363a43', fog: 0x090c11,
+      ceiling: '#3a3f4a', ceilingGrid: '#2c313b',
+      sun: 0xaac2dc, sunIntensity: 1.0, hemiSky: 0x8098b0, hemiGround: 0x141820
+    },
+    size: [72, 40],
+    spawn: { x: -33, z: 16, yaw: -1.2 },
+    walls: [],
+    rooms: [
+      { x: -28, z: -10, w: 12, d: 12, doors: [{ side: 'S', at: 2 }] },
+      { x: -13, z: -10, w: 12, d: 12, doors: [{ side: 'S', at: 0, door: true }] },
+      { x: 2, z: -10, w: 10, d: 12, doors: [{ side: 'S', at: -2, door: true }] },
+      { x: 17, z: -10, w: 14, d: 12, doors: [{ side: 'S', at: 0, door: true, locked: 'GREEN' }] },
+      { x: 30, z: -10, w: 8, d: 12, doors: [{ side: 'W', at: 0, door: true }] },
+      { x: 27, z: 11, w: 14, d: 14, doors: [{ side: 'N', at: -3 }] }
+    ],
+    partitions: [
+      [-11, 8, 42, 0.15],
+      [-11, 12, 42, 0.15]
+    ],
+    desks: [
+      [-30, 6], [-26, 6], [-22, 6], [-18, 6], [-14, 6], [-10, 6], [-6, 6], [-2, 6], [2, 6], [6, 6], [10, 6],
+      [-30, 10], [-26, 10], [-22, 10], [-18, 10], [-14, 10], [-10, 10], [-6, 10], [-2, 10], [2, 10], [6, 10], [10, 10],
+      [-30, 14], [-26, 14], [-22, 14], [-18, 14], [-14, 14], [-10, 14], [-6, 14], [-2, 14], [2, 14], [6, 14], [10, 14],
+      [-28, -11], [2, -11]
+    ],
+    props: [
+      { type: 'plant', x: -34.5, z: 2 },
+      { type: 'plant', x: 34.5, z: 2 },
+      { type: 'filing', x: -20.5, z: -3.55 },
+      { type: 'filing', x: -4.5, z: -3.55 },
+      { type: 'filing', x: 8.5, z: -3.55 },
+      { type: 'board', x: -30, z: -3.72, rot: PI },
+      { type: 'clock', x: -5, z: -3.72, rot: PI },
+      { type: 'vend', x: 14, z: -3.72, rot: PI },
+      { type: 'bin', x: -28, z: 4.6 },
+      { type: 'bin', x: 6, z: 15.5 },
+      { type: 'cooler', x: 13.5, z: 7 },
+      { type: 'copier', x: 30, z: -13 },
+      { type: 'shelf', x: 32.5, z: -8, rot: PI / 2 },
+      { type: 'crate', x: 27.5, z: -14 },
+      { type: 'counter', x: 23, z: -7 },
+      { type: 'table', x: 14, z: -12 },
+      { type: 'cooler', x: 11, z: -6 },
+      { type: 'meeting', x: -13, z: -10 },
+      { type: 'whiteboard', x: -13, z: -15.6 },
+      { type: 'bookshelf', x: -32.5, z: -15.5 },
+      { type: 'bookshelf', x: -2, z: -15.5 },
+      { type: 'sofa', x: 30, z: 8 },
+      { type: 'sofa', x: 24, z: 12, rot: PI / 2 },
+      { type: 'plant', x: 21, z: 16 },
+      { type: 'plant', x: 33, z: 16 },
+      { type: 'bookshelf', x: 27, z: 17.5 }
+    ],
+    doors: [],
+    keycards: [{ id: 'GREEN', x: -13, z: -10.55, color: 0x34d399 }],
+    guards: [
+      { name: 'Warden Silva', waypoints: [[-32, 0], [32, 0]], deaf: true, viewDist: 16, shirt: 0x1c2733, pants: 0x11161f },
+      { name: 'Rookie Delgado', waypoints: [[-30, -18], [30, -18]], viewDist: 12 },
+      { name: 'Rover Nyx', waypoints: [[25, -18], [25, 2]], viewDist: 13, patrolSpeed: 1.9, shirt: 0x1c2733, pants: 0x11161f }
+    ],
+    lasers: [
+      { x0: -8, z0: -2, x1: -8, z1: 4, blink: 2.4 },
+      { x0: 0, z0: -3, x1: 0, z1: 5, sweep: 0.6, speed: 0.4 },
+      { x0: 8, z0: -2, x1: 8, z1: 4, blink: 2.4 }
+    ],
+    notes: [
+      { x: -13, z: -10.55, text: 'STICKY NOTE (Delgado) — "Night 1. Silva says the trick is you stop being scared of the dark and start LIVING in it. Then she laughed for a really long time."' },
+      { x: 23, z: -6.9, y: 0.95, text: 'DUTY ROSTER — "Lights: HALF (cost directive A.H.). Scanners: ROVING. Morale: see attached (nothing was attached)."' },
+      { x: 27, z: 11.9, y: 0.8, text: 'FOLDED NOTE — "One more floor after this one. The last door wants a number, not a badge. You already have the number. You just don\'t know it yet. — M."' }
+    ],
+    restricted: [[17, -10, 14, 12]],
+    dark: [[-30, 2, 5, 5], [10, 2, 5, 5], [-18, 15, 6, 4], [4, 15, 6, 4], [30, 3, 6, 6]],
+    lights: [[-24, 0], [8, 0], [27, -10], [-13, -10], [17, -10]],
+    windowsSide: 'N',
+    fridge: { x: 23, z: -15 },
+    exit: { x: -33.5, z: 16.5, r: 1.7 },
+    objectives: {
+      start: 'Night shift — most lights are off. Stay in the dark and find the GREEN badge.',
+      toFridge: 'The night-security breakroom, northeast. Time the scanning laser grid.',
+      escape: 'Back to the elevator. The dark hides you. Sprinting does not.'
+    },
+    lunchName: 'THE NIGHT-SHIFT LUNCH'
+  },
+
+  // ------------------------------------------------------------------
+  // L6 — COLD STORAGE (finale) — 80 x 44
   // ------------------------------------------------------------------
   {
     id: 'vault',
@@ -586,14 +689,14 @@ export const LEVELS: LevelDef[] = [
       { x: 34, z: -21, facing: PI / 2, arc: 0.5, range: 10 }
     ],
     lasers: [
-      { x0: -23.6, z0: -4, x1: -12, z1: -4 },
+      { x0: -23.6, z0: -4, x1: -12, z1: -4, sweep: 0.45, speed: 0.3 },
       { x0: -14, z0: 2, x1: -8.4, z1: 2 },
-      { x0: -23.6, z0: 8, x1: -12, z1: 8 },
-      { x0: 12, z0: -4, x1: 23.6, z1: -4 },
+      { x0: -23.6, z0: 8, x1: -12, z1: 8, sweep: -0.45, speed: 0.36 },
+      { x0: 12, z0: -4, x1: 23.6, z1: -4, sweep: -0.45, speed: 0.3 },
       { x0: 8.4, z0: 2, x1: 14, z1: 2 },
-      { x0: 12, z0: 8, x1: 23.6, z1: 8 },
-      { x0: -4, z0: -20.5, x1: -4, z1: -14 },
-      { x0: 4, z0: -17, x1: 4, z1: -10.6 }
+      { x0: 12, z0: 8, x1: 23.6, z1: 8, sweep: 0.45, speed: 0.36 },
+      { x0: -4, z0: -20.5, x1: -4, z1: -14, blink: 2.6 },
+      { x0: 4, z0: -17, x1: 4, z1: -10.6, blink: 2.6 }
     ],
     notes: [
       { x: 31, z: -16.5, text: 'FINAL MEMO (B. Kowalczyk) — "Request DENIED for the 40th year: \'additional lock for the old fridge.\' Justification given: \'the hunger must remain possible.\' Signed A.H. I quit. Effective the moment someone reads this."' },
@@ -601,6 +704,7 @@ export const LEVELS: LevelDef[] = [
       { x: -36, z: -17.6, y: 1.1, text: 'ARCHIVE INDEX — "Aisle 1: Lunches, Confiscated (1987–2026). Aisle 2: Employees, Aligned. Aisle 3: Blue lids. So many blue lids."' }
     ],
     restricted: [[0, 0, 80, 44]],
+    dark: [[-23, -11, 4, 4], [23, 11, 4, 4], [-24, 5, 4, 5], [24, -6, 4, 5]],
     lights: [[-14, 0], [14, 0], [0, -16], [0, 14], [-31, -15], [31, -15], [-31, 15], [31, 15]],
     windowsSide: null,
     fridge: { x: 0, z: -6 },

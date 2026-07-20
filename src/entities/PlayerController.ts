@@ -17,6 +17,10 @@ export class PlayerController {
   pitch = 0;
   crouching = false;
   sprinting = false;
+  /** 0..1 sprint fuel — empties in ~4 s, refills while not sprinting. */
+  stamina = 1;
+  /** True after stamina bottoms out; sprint stays locked until ~35%. */
+  winded = false;
   readonly radius = 0.35;
   sensitivity = 0.0023;
   /** User sensitivity multiplier from settings; scales mouse + arrow look. */
@@ -68,7 +72,18 @@ export class PlayerController {
 
       const f = (input.isDown('KeyW') ? 1 : 0) - (input.isDown('KeyS') ? 1 : 0);
       const s = (input.isDown('KeyD') ? 1 : 0) - (input.isDown('KeyA') ? 1 : 0);
-      this.sprinting = !this.crouching && input.isDown('ShiftLeft') && f > 0;
+      const wantSprint = !this.crouching && input.isDown('ShiftLeft') && f > 0;
+      this.sprinting = wantSprint && !this.winded && this.stamina > 0;
+      if (this.sprinting) {
+        // ~3s of sprint from full — a burst to cross a gap or shake a
+        // guard, not a way to jog the whole floor.
+        this.stamina = Math.max(0, this.stamina - dt * 0.34);
+        if (this.stamina === 0) this.winded = true;
+      } else {
+        // Standing still catches your breath faster than walking does.
+        this.stamina = Math.min(1, this.stamina + dt * (this.speed < 0.5 ? 0.2 : 0.11));
+        if (this.winded && this.stamina >= 0.4) this.winded = false;
+      }
 
       // Camera-relative move axes: yaw=0 faces -Z (three.js convention).
       const sinY = Math.sin(this.yaw);
