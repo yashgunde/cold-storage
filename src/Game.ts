@@ -9,6 +9,7 @@ import { LEVELS, ENDING_CEO, ENDING_LUNCH } from './world/levels';
 import { Guard, type GuardState, type GuardSenseCtx } from './entities/Guard';
 import { FootstepEmitter, NoiseSystem } from './systems/Stealth';
 import { NavGrid } from './systems/NavGrid';
+import { MusicPlayer } from './core/MusicPlayer';
 import { InteractSystem } from './systems/Interact';
 import { HUD } from './ui/HUD';
 
@@ -59,6 +60,7 @@ export class Game {
   private readonly hud = new HUD();
   private readonly audio = new AudioEngine();
   private readonly noise = new NoiseSystem();
+  private readonly music = new MusicPlayer();
   private readonly footsteps = new FootstepEmitter();
   private readonly interact = new InteractSystem();
 
@@ -87,6 +89,7 @@ export class Game {
     sens?: number;
     vol?: number;
     voice?: number;
+    music?: number;
   } = { unlocked: 0 };
 
   private lastT = 0;
@@ -114,6 +117,7 @@ export class Game {
     window.addEventListener('resize', () => this.onResize());
     this.lockOverlay.addEventListener('click', () => {
       this.audio.ensure();
+      this.music.start();
       this.input.requestLock();
     });
     document.getElementById('brief-begin')!.addEventListener('click', () => this.beginShift());
@@ -158,6 +162,7 @@ export class Game {
     bindSlider('set-sens', (v) => (this.save.sens = v));
     bindSlider('set-vol', (v) => (this.save.vol = v));
     bindSlider('set-voice', (v) => (this.save.voice = v));
+    bindSlider('set-music', (v) => (this.save.music = v));
     this.applySettings();
 
     this.toMenu();
@@ -178,9 +183,11 @@ export class Game {
     const sens = this.save.sens ?? 1;
     const vol = this.save.vol ?? 0.5;
     const voice = this.save.voice ?? 0.9;
+    const music = this.save.music ?? 0.45;
     this.player.lookScale = sens;
     this.audio.setMasterVolume(vol);
     this.audio.setVoiceVolume(voice);
+    this.music.setVolume(music);
     const sync = (id: string, value: number, label: string) => {
       const input = document.getElementById(id) as HTMLInputElement | null;
       const span = document.getElementById(`${id}-v`);
@@ -190,6 +197,7 @@ export class Game {
     sync('set-sens', sens, `${sens.toFixed(2)}x`);
     sync('set-vol', vol, `${Math.round(vol * 100)}%`);
     sync('set-voice', voice, `${Math.round(voice * 100)}%`);
+    sync('set-music', music, `${Math.round(music * 100)}%`);
   }
 
   /** Every character gets a stable voice derived from their name. */
@@ -227,6 +235,7 @@ export class Game {
       if (!locked) {
         btn.addEventListener('click', () => {
           this.audio.ensure();
+          this.music.start();
           this.audio.uiClick();
           this.showBriefing(i);
         });
@@ -253,6 +262,7 @@ export class Game {
 
   private beginShift(): void {
     this.audio.ensure();
+    this.music.start();
     this.audio.uiClick();
     this.loadLevel(this.briefingIndex);
     this.state = 'play';
