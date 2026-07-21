@@ -3,10 +3,12 @@ import type { LevelDef } from './LevelBuilder';
 const PI = Math.PI;
 
 /**
- * The six shifts of COLD STORAGE. Floors are corridor-and-room
+ * The nine shifts of COLD STORAGE. Floors are corridor-and-room
  * architecture: `rooms` generate their own walls with door gaps, so keep
  * rooms separated by corridors. Waypoint lanes stay on documented clear
  * corridors; 2-waypoint guards ping-pong (safe in tight geometry).
+ * A single-waypoint guard is a POSTED guard: they stand there facing
+ * `facing` and only a lure (thrown can) reliably moves them.
  */
 export const LEVELS: LevelDef[] = [
   // ------------------------------------------------------------------
@@ -75,6 +77,7 @@ export const LEVELS: LevelDef[] = [
     ],
     lights: [[-12, 7], [2, 7], [-2, -6], [15, -7], [-16, -8], [10, 6]],
     windowsSide: 'S',
+    cans: [[13.2, -4.2]],
     fridge: { x: 19.5, z: -9 },
     exit: { x: -18, z: 9, r: 1.5 },
     objectives: {
@@ -179,6 +182,7 @@ export const LEVELS: LevelDef[] = [
     restricted: [[17, -10, 14, 12]],
     lights: [[-24, 0], [-8, 0], [8, 0], [24, 0], [-16, 10], [0, 10], [17, -10], [27, 11]],
     windowsSide: 'N',
+    cans: [[13.9, 6.5], [-1.4, 4.9], [-27.5, 5.1]],
     fridge: { x: 23, z: -15 },
     exit: { x: -33.5, z: 16.5, r: 1.7 },
     objectives: {
@@ -288,6 +292,7 @@ export const LEVELS: LevelDef[] = [
     restricted: [[18, -2, 28, 12], [24, -15.5, 14, 9]],
     lights: [[-20, 6], [4, 6], [26, 6], [-20, -9.5], [8, -9.5], [18, -2], [29, -4], [0, 15]],
     windowsSide: 'S',
+    cans: [[-33.8, 4.6], [2.6, 12.9], [34, 11]],
     fridge: { x: 30.5, z: -6 },
     exit: { x: -33.5, z: 17.5, r: 1.7 },
     objectives: {
@@ -299,7 +304,111 @@ export const LEVELS: LevelDef[] = [
   },
 
   // ------------------------------------------------------------------
-  // L3 — THE GLASS FLOOR — 72 x 40
+  // L3 — FACILITIES — 72 x 40 · introduces posted guards + can lures
+  // ------------------------------------------------------------------
+  {
+    id: 'facilities',
+    name: 'FACILITIES',
+    floorLabel: 'FLOOR 9 · BUILDING SERVICES',
+    briefing: {
+      from: 'Marv — over the service intercom, chewing something',
+      lines: [
+        '"Floor 9 is the building\'s stomach. Pipes, fuses, and the supply cage where they stage the week\'s lunches."',
+        '"The cage wants a RED card. The RED card lives in the custodial office — and Officer Boone has stood in front of that door since 2019. He does not patrol. He does not blink. He is a door with a pension."',
+        '"But a man who stands still all day finds any little clatter FASCINATING. People leave soda cans everywhere — pocket one (E), throw it somewhere unhelpful (Q), and walk in while he communes with it."',
+        '"Watch the blinking beam by the cage. And keep your lids. — M."'
+      ]
+    },
+    palette: {
+      wall: 0x9b9484, accent: 0xf59e0b, trim: 0x54493a,
+      carpetA: '#4a463f', carpetB: '#4e4a42', fog: 0x111009,
+      ceiling: '#c9c4b6', ceilingGrid: '#a8a396',
+      sun: 0xffd9a0, sunIntensity: 1.4, hemiSky: 0xd8cbb8
+    },
+    size: [72, 40],
+    spawn: { x: -33.5, z: 17, yaw: -1.57 },
+    walls: [
+      [-20, 2, 20, 0.4],
+      [8, 2, 16, 0.4],
+      [28, 2, 8, 0.4]
+    ],
+    rooms: [
+      { x: -25, z: -13, w: 14, d: 10, doors: [{ side: 'E', at: 2, door: true }] },
+      { x: -1, z: -13, w: 12, d: 10, doors: [{ side: 'S', at: -3, door: true, locked: 'RED' }] },
+      { x: 24, z: -13, w: 16, d: 10, doors: [{ side: 'W', at: 2, door: true }] },
+      { x: -25, z: 13, w: 12, d: 10, doors: [{ side: 'N', at: 0, door: true }] },
+      { x: 25, z: 13, w: 14, d: 10, doors: [{ side: 'N', at: -3 }] }
+    ],
+    desks: [[-25, 13.9], [10, 6.5], [-23, -16.5]],
+    props: [
+      { type: 'shelf', x: -31, z: -17.5 },
+      { type: 'shelf', x: -27, z: -17.5 },
+      { type: 'crate', x: -30, z: -10.5 },
+      { type: 'crate', x: -20.5, z: -17 },
+      { type: 'copier', x: -19.5, z: -10.5 },
+      { type: 'whiteboard', x: -25, z: -17.6, rot: 0 },
+      { type: 'crate', x: 29, z: -11 },
+      { type: 'crate', x: 31, z: -16.5 },
+      { type: 'crate', x: 20, z: -16.5 },
+      { type: 'shelf', x: 25, z: -17.5 },
+      { type: 'filing', x: 17.5, z: -16 },
+      { type: 'vend', x: 21.5, z: 17.6 },
+      { type: 'vend', x: 24, z: 17.6 },
+      { type: 'counter', x: 30, z: 13, rot: PI / 2 },
+      { type: 'table', x: 26, z: 12 },
+      { type: 'sofa', x: 27, z: 9.5 },
+      { type: 'cooler', x: 31.5, z: 17 },
+      { type: 'bin', x: 19, z: 16.5 },
+      { type: 'filing', x: -30.5, z: 16.5 },
+      { type: 'shelf', x: -21, z: 17.5 },
+      { type: 'bin', x: -22, z: 9.5 },
+      { type: 'plant', x: -34.5, z: 6 },
+      { type: 'plant', x: 16, z: 6.5 },
+      { type: 'art', x: -14, z: 2.45, rot: PI },
+      { type: 'clock', x: 6, z: 2.45, rot: PI },
+      { type: 'board', x: 27, z: 2.45, rot: PI },
+      { type: 'bin', x: -12, z: -6.5 },
+      { type: 'cooler', x: 7, z: -7 },
+      { type: 'crate', x: 2, z: -9.5 }
+    ],
+    doors: [],
+    keycards: [{ id: 'RED', x: -25.4, z: 13.6, color: 0xef4444 }],
+    guards: [
+      { name: 'Officer Boone', waypoints: [[-25, 4.6]], facing: PI, viewDist: 13 },
+      { name: 'Officer Pike', waypoints: [[-30, -4], [30, -4]], viewDist: 13 },
+      { name: 'Rover Ferris', waypoints: [[-14, 5], [14, 5]], viewDist: 12, patrolSpeed: 1.9 },
+      { name: 'Custodian Mopps', waypoints: [[-33.5, 2], [-33.5, -16]], civilian: true, patrolSpeed: 1.2 },
+      { name: 'Officer Greaves', waypoints: [[34, -4], [34, 16]], viewDist: 12 }
+    ],
+    cameras: [
+      { x: -4, z: -3, facing: 0, arc: 0.55, range: 9 }
+    ],
+    lasers: [
+      { x0: -7.4, z0: -5.6, x1: 5.4, z1: -5.6, blink: 2.8 }
+    ],
+    notes: [
+      { x: -24.6, z: 14.2, text: 'BOONE-WATCH LOG, DAY 1,208 (Mopps) — "Subject has not moved. Blinked twice on Tuesday. I respect him and I fear him in equal measure."' },
+      { x: 26, z: 12.55, y: 0.79, text: 'ALL-STAFF MEMO #6 (B. Kowalczyk) — "Officer Boone is NOT a statue and it is UNKIND to keep leaning umbrellas against him."' },
+      { x: -27, z: -17.4, y: 1.05, text: 'LOST & FOUND, COLD ITEMS — "One (1) lunch, unmarked lid. No engraving, so not one of THEIRS. Unclaimed by Friday it becomes infrastructure."' },
+      { x: 3, z: -7.2, y: 0.03, text: 'WORK ORDER #4451 — "Reinforce the lunch cage (again). Whatever keeps bending the mesh, it is not mice, and it is not hungry in any normal way."' }
+    ],
+    restricted: [[-1, -13, 12, 10], [-25, 13, 12, 10]],
+    dark: [[-30, -16.5, 3.5, 3], [29, -16.5, 4, 3], [32, 5, 4, 4]],
+    lights: [[-25, -13], [-1, -13], [22, -12], [-25, 13], [25, 13], [-16, -4], [12, -4], [0, 5]],
+    windowsSide: null,
+    cans: [[22, 10.3], [26.5, 10.6], [-28.8, -10.2], [6, 6.6]],
+    fridge: { x: -1, z: -15.5 },
+    exit: { x: -33.5, z: 17.5, r: 1.7 },
+    objectives: {
+      start: 'The RED card is in the custodial office, southwest — and Officer Boone IS its door policy. A thrown can (Q) is a meeting he must attend.',
+      toFridge: 'RED opens the supply cage, north-center. Time the blinking beam. Mind the camera.',
+      escape: 'Elevator, southwest corner. Boone saw nothing. Nobody tell Boone.'
+    },
+    lunchName: 'A LUNCH (UNMARKED)'
+  },
+
+  // ------------------------------------------------------------------
+  // L4 — THE GLASS FLOOR — 72 x 40
   // ------------------------------------------------------------------
   {
     id: 'glass',
@@ -387,7 +496,8 @@ export const LEVELS: LevelDef[] = [
       { name: 'Officer Sloane', waypoints: [[-32, 2], [32, 2]], viewDist: 13 },
       { name: 'Asst. Mercer', waypoints: [[-30, -10], [30, -10]], civilian: true, patrolSpeed: 2.0, viewDist: 14 },
       { name: 'Asst. Vale', waypoints: [[21, 7], [31, 7], [31, 16], [21, 16]], civilian: true, patrolSpeed: 1.8, viewDist: 13 },
-      { name: 'Officer Brooks', waypoints: [[35, -18], [35, 18]], viewDist: 13 }
+      { name: 'Officer Brooks', waypoints: [[35, -18], [35, 18]], viewDist: 13 },
+      { name: 'Officer Pierce', waypoints: [[15.5, 9]], facing: -PI / 2, viewDist: 13 }
     ],
     cameras: [
       { x: -14, z: 3.4, facing: 0, arc: 0.65, range: 12 },
@@ -403,18 +513,129 @@ export const LEVELS: LevelDef[] = [
     restricted: [[26, 12, 16, 14]],
     lights: [[-20, 2], [0, 2], [20, 2], [-15, -10], [10, -10], [26, 12], [-15, 12], [2, 16]],
     windowsSide: 'N',
+    cans: [[12.9, 6.6], [13.1, 16.4], [-27.6, 6.9]],
     fridge: { x: 32.5, z: 17 },
     exit: { x: -33.5, z: 16.5, r: 1.7 },
     objectives: {
       start: 'GREEN clearance is in one of the north window offices. Glass remembers nothing. Assistants remember everything.',
-      toFridge: 'The executive lounge fridge. Through the glass, past the assistants.',
+      toFridge: 'The executive lounge fridge. Officer Pierce holds the lounge door — something loud (Q), somewhere else.',
       escape: 'Elevator. Do not run. Running is a confession.'
     },
     lunchName: "DORIAN'S LUNCH (ARTISANAL)"
   },
 
   // ------------------------------------------------------------------
-  // L4 — R&D — 72 x 40
+  // L5 — THE STACKS — 72 x 40 · dark archive, keen ears, posted cage guard
+  // ------------------------------------------------------------------
+  {
+    id: 'stacks',
+    name: 'THE STACKS',
+    floorLabel: 'FLOOR 16 · RECORDS & MEMORY',
+    briefing: {
+      from: 'M. — a note inside a returned library book, stamped FLOOR 16',
+      lines: [
+        '"Records keeps everything the company would rather forget, and one thing it cannot: a rival\'s lunch, confiscated in 1994. Consider tonight a rehearsal for the vault."',
+        '"The cage takes VIOLET. The card sits in the reading room, in the open — nobody steals from Records twice. Ask the boxes in aisle three."',
+        '"Officer Ledger holds the cage door. A wall with a flashlight. You know the drill by now: something loud, somewhere else."',
+        '"And mind Quill in the stacks. No headphones, ever. Quill hears a dropped pin apologize. Walk. Softly. — M."'
+      ]
+    },
+    palette: {
+      wall: 0x7a715c, accent: 0xc9a13b, trim: 0x40382a,
+      carpetA: '#3e3a30', carpetB: '#423e33', fog: 0x0b0a07,
+      ceiling: '#c6bfae', ceilingGrid: '#a49d8c',
+      sun: 0xffd9a0, sunIntensity: 0.9, hemiSky: 0xcbbba0, hemiGround: 0x191610
+    },
+    size: [72, 40],
+    spawn: { x: -33.5, z: 16, yaw: -1.2 },
+    walls: [],
+    rooms: [
+      { x: 0, z: -12, w: 18, d: 12, doors: [{ side: 'S', at: 4, door: true, locked: 'VIOLET' }] },
+      { x: -26, z: -13, w: 12, d: 10, doors: [{ side: 'E', at: 2, door: true }] },
+      { x: 25, z: 12, w: 14, d: 12, doors: [{ side: 'W', at: -2, door: true }] }
+    ],
+    desks: [[-26, -16], [23, 16.5]],
+    props: [
+      // Three rows of stacks with slip-through gaps — the archive proper.
+      { type: 'bookshelf', x: -30, z: -1 }, { type: 'bookshelf', x: -26.8, z: -1 },
+      { type: 'bookshelf', x: -23.6, z: -1 }, { type: 'bookshelf', x: -20.4, z: -1 },
+      { type: 'bookshelf', x: -17.2, z: -1 }, { type: 'bookshelf', x: -14, z: -1 },
+      { type: 'bookshelf', x: -10.8, z: -1 }, { type: 'bookshelf', x: -7.6, z: -1 },
+      { type: 'bookshelf', x: -4.4, z: -1 }, { type: 'bookshelf', x: -1.2, z: -1 },
+      { type: 'bookshelf', x: 2, z: -1 }, { type: 'bookshelf', x: 5.2, z: -1 },
+      { type: 'bookshelf', x: -30, z: 3 }, { type: 'bookshelf', x: -26.8, z: 3 },
+      { type: 'bookshelf', x: -23.6, z: 3 }, { type: 'bookshelf', x: -20.4, z: 3 },
+      { type: 'bookshelf', x: -17.2, z: 3 }, { type: 'bookshelf', x: -14, z: 3 },
+      { type: 'bookshelf', x: -10.8, z: 3 }, { type: 'bookshelf', x: -7.6, z: 3 },
+      { type: 'bookshelf', x: -4.4, z: 3 }, { type: 'bookshelf', x: -1.2, z: 3 },
+      { type: 'bookshelf', x: 2, z: 3 }, { type: 'bookshelf', x: 5.2, z: 3 },
+      { type: 'bookshelf', x: -30, z: 7 }, { type: 'bookshelf', x: -26.8, z: 7 },
+      { type: 'bookshelf', x: -23.6, z: 7 }, { type: 'bookshelf', x: -20.4, z: 7 },
+      { type: 'bookshelf', x: -17.2, z: 7 }, { type: 'bookshelf', x: -14, z: 7 },
+      { type: 'bookshelf', x: -10.8, z: 7 }, { type: 'bookshelf', x: -7.6, z: 7 },
+      { type: 'bookshelf', x: -4.4, z: 7 }, { type: 'bookshelf', x: -1.2, z: 7 },
+      { type: 'bookshelf', x: 2, z: 7 }, { type: 'bookshelf', x: 5.2, z: 7 },
+      // Reading room.
+      { type: 'meeting', x: 25, z: 13 },
+      { type: 'sofa', x: 20.5, z: 16.5 },
+      { type: 'plant', x: 30, z: 7.5 },
+      { type: 'bookshelf', x: 31.6, z: 10, rot: PI / 2 },
+      { type: 'bookshelf', x: 31.6, z: 14, rot: PI / 2 },
+      // Archive office, northwest.
+      { type: 'filing', x: -31.5, z: -10 },
+      { type: 'crate', x: -30.5, z: -17.2 },
+      { type: 'shelf', x: -21.5, z: -17.5 },
+      // Records cage interior.
+      { type: 'shelf', x: -7, z: -17.5 }, { type: 'shelf', x: -3, z: -17.5 },
+      { type: 'shelf', x: 3, z: -17.5 }, { type: 'shelf', x: 7, z: -17.5 },
+      { type: 'crate', x: -6, z: -9.2 }, { type: 'crate', x: 6.5, z: -16.5 },
+      // South hall + west corridor.
+      { type: 'sofa', x: -20, z: 16.5 },
+      { type: 'table', x: -15, z: 16.5 },
+      { type: 'plant', x: -7, z: 17.5 },
+      { type: 'plant', x: 12, z: 17.5 },
+      { type: 'cooler', x: 14, z: 13 },
+      { type: 'bin', x: -28, z: 13 },
+      { type: 'board', x: -2, z: 19.75, rot: 0 },
+      { type: 'art', x: -35.75, z: 4, rot: PI / 2 }
+    ],
+    doors: [],
+    keycards: [{ id: 'VIOLET', x: 25.4, z: 12.7, color: 0x8b5cf6 }],
+    guards: [
+      { name: 'Officer Ledger', waypoints: [[4, -3]], facing: 0, viewDist: 13 },
+      { name: 'Archivist Quill', waypoints: [[-30, 1], [10, 1]], civilian: true, keenEars: true, viewDist: 11, patrolSpeed: 1.15, shirt: 0x6b5a3f, pants: 0x3c352a },
+      { name: 'Officer Sorel', waypoints: [[-32, -4.5], [32, -4.5]], viewDist: 12 },
+      { name: 'Officer Vesper', waypoints: [[34, -16], [34, 16]], viewDist: 12, patrolSpeed: 1.8 },
+      { name: 'Officer Marlowe', waypoints: [[-30, 12], [12, 12]], viewDist: 12 },
+      { name: 'Asst. Folio', waypoints: [[21, 9], [29, 9]], civilian: true, patrolSpeed: 1.5, viewDist: 12 }
+    ],
+    cameras: [
+      { x: 0, z: -17.4, facing: PI, arc: 0.7, range: 11 },
+      { x: 19.2, z: 16.8, facing: -PI / 2, arc: 0.6, range: 10 }
+    ],
+    notes: [
+      { x: -26.4, z: -15.7, text: 'ACQUISITIONS LEDGER, 1994 — "One (1) lunch, confiscated from a rival firm\'s courier at the lobby doors. Lid: unmarked. The Founder wept anyway. Filed under HUNGER, COMPARATIVE."' },
+      { x: 24.6, z: 13.3, y: 0.78, text: 'READING ROOM RULES — "1. Silence. 2. SILENCE. 3. If you can hear someone breathing in the stacks, page Quill. Quill heard it first."' },
+      { x: -14, z: 1, y: 0.03, text: 'SHELF TAG, AISLE THREE — "EMPLOYEES, FORMER: M–Z. The boxes rattle at noon. We have stopped investigating. — Records"' },
+      { x: 2, z: -4.5, y: 0.03, text: 'CHECKOUT SLIP, LAMINATED — "Item: LUNCH (1994). Borrower: D_____. Due: never. Status: RENEWED DAILY SINCE 1994."' }
+    ],
+    restricted: [[0, -12, 18, 12]],
+    dark: [[-24, 1, 3, 3], [-8, 1, 3, 3], [-16, 5, 3, 3], [3, 5, 3, 3], [-31, 8, 3, 3]],
+    lights: [[-26, -13], [0, -12], [25, 12], [-33, -3], [16, 2], [-2, 12], [22, -3], [33, 4]],
+    windowsSide: null,
+    cans: [[19.3, 7.2], [10.5, 1], [-24, -10.5], [-33, 10.5]],
+    fridge: { x: 0, z: -15 },
+    exit: { x: -33.5, z: 16.5, r: 1.7 },
+    objectives: {
+      start: 'The VIOLET card sits in the reading room, east — in the open, under a camera. Quill hears everything: walk, never run.',
+      toFridge: 'The records cage, center-north. Ledger never leaves the door — pull him away with a can (Q).',
+      escape: 'Elevator, southwest. The stacks are dark. Be furniture when the flashlights pass.'
+    },
+    lunchName: 'A LUNCH, CONFISCATED (1994)'
+  },
+
+  // ------------------------------------------------------------------
+  // L6 — R&D — 72 x 40
   // ------------------------------------------------------------------
   {
     id: 'rnd',
@@ -509,6 +730,7 @@ export const LEVELS: LevelDef[] = [
     dark: [[-30, -12.5, 3.5, 3.5], [30, 12, 4, 5]],
     lights: [[0, -7], [0, 6], [-15, -10.5], [15, -10.5], [-26, -14], [26, -14], [-15, 12], [26, 13]],
     windowsSide: 'N',
+    cans: [[14.8, 17.8], [-33.9, 10.4], [-20.9, -10.6]],
     fridge: { x: 0, z: -7 },
     exit: { x: -33.5, z: 16.5, r: 1.7 },
     objectives: {
@@ -520,7 +742,7 @@ export const LEVELS: LevelDef[] = [
   },
 
   // ------------------------------------------------------------------
-  // L5 — THE NIGHT SHIFT — 72 x 40 (geometry cloned from the Bullpen)
+  // L7 — THE NIGHT SHIFT — 72 x 40 (geometry cloned from the Bullpen)
   // ------------------------------------------------------------------
   {
     id: 'nightshift',
@@ -595,7 +817,8 @@ export const LEVELS: LevelDef[] = [
     guards: [
       { name: 'Warden Silva', waypoints: [[-32, 0], [32, 0]], deaf: true, viewDist: 16, shirt: 0x1c2733, pants: 0x11161f },
       { name: 'Rookie Delgado', waypoints: [[-30, -18], [30, -18]], viewDist: 12 },
-      { name: 'Rover Nyx', waypoints: [[25, -18], [25, 2]], viewDist: 13, patrolSpeed: 1.9, shirt: 0x1c2733, pants: 0x11161f }
+      { name: 'Rover Nyx', waypoints: [[25, -18], [25, 2]], viewDist: 13, patrolSpeed: 1.9, shirt: 0x1c2733, pants: 0x11161f },
+      { name: 'Statue Vann', waypoints: [[17, -2.2]], facing: 0, viewDist: 14, shirt: 0x1c2733, pants: 0x11161f }
     ],
     lasers: [
       { x0: -8, z0: -2, x1: -8, z1: 4, blink: 2.4 },
@@ -611,18 +834,19 @@ export const LEVELS: LevelDef[] = [
     dark: [[-30, 2, 5, 5], [10, 2, 5, 5], [-18, 15, 6, 4], [4, 15, 6, 4], [30, 3, 6, 6]],
     lights: [[-24, 0], [8, 0], [27, -10], [-13, -10], [17, -10]],
     windowsSide: 'N',
+    cans: [[14.6, -3], [13.9, 7.6], [-27.4, 5.1]],
     fridge: { x: 23, z: -15 },
     exit: { x: -33.5, z: 16.5, r: 1.7 },
     objectives: {
       start: 'Night shift — most lights are off. Stay in the dark and find the GREEN badge.',
-      toFridge: 'The night-security breakroom, northeast. Time the scanning laser grid.',
+      toFridge: 'The breakroom, northeast — Vann stands on its door all night. A can (Q) is the only thing that moves him. Silva won\'t hear it; Vann will.',
       escape: 'Back to the elevator. The dark hides you. Sprinting does not.'
     },
     lunchName: 'THE NIGHT-SHIFT LUNCH'
   },
 
   // ------------------------------------------------------------------
-  // L6 — COLD STORAGE (finale) — 80 x 44
+  // L8 — COLD STORAGE (finale) — 80 x 44
   // ------------------------------------------------------------------
   {
     id: 'vault',
@@ -708,6 +932,7 @@ export const LEVELS: LevelDef[] = [
     dark: [[-23, -11, 4, 4], [23, 11, 4, 4], [-24, 5, 4, 5], [24, -6, 4, 5]],
     lights: [[-14, 0], [14, 0], [0, -16], [0, 14], [-31, -15], [31, -15], [-31, 15], [31, 15]],
     windowsSide: null,
+    cans: [[-38.5, 8.6], [1.3, 13.3], [17.2, -19]],
     fridge: { x: 0, z: -6 },
     exit: { x: -39.2, z: 21.2, r: 1.5 },
     exitLockdown: { x: 39, z: -21, r: 1.5 },

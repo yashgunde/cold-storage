@@ -37,6 +37,22 @@ const CALM_BARKS = [
   'Coffee. I need coffee.',
   "Logging it as 'ambient vibes'."
 ];
+const LURE_BARKS = [
+  'Hm? What fell over there?',
+  'If that is the ice machine again, I swear—',
+  'Objects do not just clatter. Investigating.',
+  'A can? Who throws a full can?'
+];
+const SEARCH_BARKS = [
+  'I know something was here…',
+  'Checking behind things. Standard procedure.',
+  'Not crazy. Thorough. There is a difference.'
+];
+const REPORT_BARKS = [
+  'SECURITY! Weird person! Weird person RIGHT there!',
+  'I am reporting this. I am reporting it SO hard.',
+  'Officer! OFFICER. You need to see this individual.'
+];
 
 const pick = (arr: string[]) => arr[Math.floor(Math.random() * arr.length)];
 
@@ -67,9 +83,13 @@ export class Game {
   private readonly footsteps = new FootstepEmitter();
   private readonly interact = new InteractSystem();
 
-  /** Throwable distractions: count remaining this level + live projectiles. */
+  /** Throwable cans: scavenged from the level, plus live projectiles. */
   private throwsLeft = 0;
   private distractions: Distraction[] = [];
+  /** Seconds since a throw that guards would still connect to you. */
+  private throwTimer = 0;
+  /** Tutorial flag: the player has lobbed at least one can this level. */
+  private threwCan = false;
 
   private readonly fpsEl = document.getElementById('fps')!;
   private readonly lockOverlay = document.getElementById('lock-overlay')!;
@@ -322,10 +342,14 @@ export class Game {
     this.player.spawnAt(def.spawn.x, def.spawn.z, def.spawn.yaw);
     this.player.crouching = false;
 
-    // Reset throwable distractions for the new floor.
+    // Reset throwable distractions for the new floor. Cans are scavenged,
+    // not issued: you start empty-handed and pocket what the office leaves
+    // lying around.
     for (const d of this.distractions) this.scene.remove(d.mesh);
     this.distractions = [];
-    this.throwsLeft = 3;
+    this.throwsLeft = 0;
+    this.throwTimer = 0;
+    this.threwCan = false;
 
     for (const gdef of def.guards) {
       const g = new Guard(gdef);
@@ -333,6 +357,8 @@ export class Game {
       built.root.add(g.figure.root);
       this.guards.push(g);
     }
+    // Civilians need to know who the officers are (to narc to them).
+    for (const g of this.guards) g.allies = this.guards;
 
     // Guard pathfinding: one grid per level, doors excluded from the static
     // layer (guards open them) and re-stamped as they lock/unlock.
@@ -388,6 +414,22 @@ export class Game {
       });
     }
 
+    for (const can of built.cans) {
+      this.interact.add({
+        x: can.x,
+        z: can.z,
+        radius: 1.7,
+        prompt: () => (can.mesh.visible ? 'Take the soda can' : null),
+        act: () => {
+          can.mesh.visible = false;
+          this.throwsLeft++;
+          this.hud.setCans(this.throwsLeft);
+          this.audio.grab();
+          this.hud.toast('Soda can pocketed. Warm. Perfect throwing weight.', 2200);
+        }
+      });
+    }
+
     this.interact.add({
       x: def.fridge.x,
       z: def.fridge.z,
@@ -420,6 +462,14 @@ export class Game {
           done: (g) => g.built!.doors[0].open
         },
         {
+          text: 'Someone abandoned a soda can by the breakroom table. Take it (E). Litter is everyone\'s job.',
+          done: (g) => g.throwsLeft > 0 || g.threwCan
+        },
+        {
+          text: 'Wellness moment: THROW the can (Q). Notice how noise draws attention. File that away.',
+          done: (g) => g.threwCan
+        },
+        {
           text: 'It is 5 PM. Retrieve YOUR lunch from the communal fridge.',
           done: (g) => g.hasLunch
         }
@@ -430,6 +480,7 @@ export class Game {
 
     this.hud.hideEnd();
     this.hud.setKeycards(this.inventory);
+    this.hud.setCans(this.throwsLeft);
     this.hud.setDetection(0, false);
   }
 
@@ -465,7 +516,7 @@ export class Game {
   private onGuardState(g: Guard, to: GuardState): void {
     if (to === 'suspicious') {
       this.audio.sting();
-      const bark = pick(SUSPICIOUS_BARKS);
+      const bark = pick(g.investigateKind === 'lure' ? LURE_BARKS : SUSPICIOUS_BARKS);
       this.speakAs(g.opts.name, bark);
       this.hud.toast(`${g.opts.name}: “${bark}”`);
       if (!this.tipShown) {
@@ -475,12 +526,33 @@ export class Game {
           9000
         );
       }
+    } else if (to === 'search') {
+      const bark = pick(SEARCH_BARKS);
+      this.speakAs(g.opts.name, bark);
+      this.hud.toast(`${g.opts.name}: “${bark}”`, 2400);
+    } else if (to === 'report') {
+      // A witness bolts for security. Their shout carries like a shout.
+      this.stats.spotted++;
+      this.audio.sting();
+      const bark = pick(REPORT_BARKS);
+      this.speakAs(g.opts.name, bark);
+      this.hud.toast(`${g.opts.name} is going to find security. “${bark}”`, 4200);
+      this.noise.emit(g.x, g.z, 14, 0.25);
     } else if (to === 'chase') {
       this.stats.spotted++;
       this.audio.alarm();
       const bark = pick(CHASE_BARKS);
       this.speakAs(g.opts.name, bark);
       this.hud.toast(`${g.opts.name}: “${bark}”`);
+      // "HEY!" carries: colleagues in earshot converge on where YOU are.
+      const px = this.player.position.x;
+      const pz = this.player.position.z;
+      for (const other of this.guards) {
+        if (other === g) continue;
+        const d = Math.hypot(other.x - g.x, other.z - g.z);
+        const reach = this.world.segmentBlocked(g.x, g.z, other.x, other.z, 1.55) ? 9 : 18;
+        if (d < reach) other.hearCallout(px, pz);
+      }
     } else if (to === 'return') {
       const bark = pick(CALM_BARKS);
       this.speakAs(g.opts.name, bark);
@@ -542,13 +614,16 @@ export class Game {
    * per-level textures, and the sun's shadow map. Sprite indicator
    * textures are shared module singletons and are deliberately kept.
    */
-  /** Lob a distraction can in the look direction; it lures guards on impact. */
+  /** Lob a can in the look direction; it lures guards on impact. */
   private throwDistraction(): void {
     if (this.throwsLeft <= 0) {
-      this.hud.toast('Nothing left to throw.', 1400);
+      this.hud.toast('Nothing to throw. Cans turn up near vending machines and bins.', 2400);
       return;
     }
     this.throwsLeft--;
+    this.threwCan = true;
+    // Anyone watching you RIGHT NOW knows exactly who threw it.
+    this.throwTimer = 1.1;
     const px = this.player.position.x;
     const pz = this.player.position.z;
     const yaw = this.player.yaw;
@@ -568,8 +643,24 @@ export class Game {
     const proj = new Distraction(from, to, Math.max(0.35, dist * 0.06), 1.1);
     this.scene.add(proj.mesh);
     this.distractions.push(proj);
+    // Thrift: a landed can can be walked over and pocketed again.
+    this.interact.add({
+      x: to.x,
+      z: to.z,
+      radius: 1.6,
+      prompt: () => (proj.landed && !proj.taken ? 'Pick the can back up' : null),
+      act: () => {
+        proj.taken = true;
+        this.scene.remove(proj.mesh);
+        this.throwsLeft++;
+        this.hud.setCans(this.throwsLeft);
+        this.audio.grab();
+        this.hud.toast('Can recovered. Reduce. Reuse. Redistract.', 1800);
+      }
+    });
     this.audio.uiClick();
-    this.hud.toast(`Distraction thrown — ${this.throwsLeft} left.`, 1300);
+    this.hud.setCans(this.throwsLeft);
+    this.hud.toast(`Can thrown — ${this.throwsLeft} left.`, 1300);
   }
 
   private disposeLevel(root: THREE.Object3D): void {
@@ -679,8 +770,13 @@ export class Game {
       const restricted = this.inRestricted(px, pz);
       // Sprinting kicks up enough of a scene that the shadows won't save you.
       const hidden = this.inShadow(px, pz) && !this.player.sprinting;
+      this.throwTimer = Math.max(0, this.throwTimer - dt);
       const behaviorActive =
-        this.hasLunch || restricted || this.player.crouching || this.player.sprinting;
+        this.hasLunch ||
+        restricted ||
+        this.player.crouching ||
+        this.player.sprinting ||
+        this.throwTimer > 0;
 
       if (
         this.footsteps.update(dt, this.player.speed, this.player.crouching, this.player.sprinting, px, pz, this.noise)
@@ -694,12 +790,18 @@ export class Game {
       if (active && this.input.wasPressed('KeyQ')) this.throwDistraction();
       for (const d of this.distractions) {
         if (d.update(dt)) {
-          this.noise.emit(d.mesh.position.x, d.mesh.position.z, 16, 0.5);
+          this.noise.emit(d.mesh.position.x, d.mesh.position.z, 16, 0.5, true);
           if (active) this.audio.step(false, 0.5);
         }
       }
 
-      const senseCtx: GuardSenseCtx = { alertBoost: this.alertBoost, restricted, lunch: this.hasLunch, hidden };
+      const senseCtx: GuardSenseCtx = {
+        alertBoost: this.alertBoost,
+        restricted,
+        lunch: this.hasLunch,
+        hidden,
+        threw: this.throwTimer > 0
+      };
       const noises = this.noise.drain();
       for (const g of this.guards) {
         g.update(dt, this.player, this.world, noises, (gg) => this.onCaught(gg), senseCtx);
@@ -710,6 +812,18 @@ export class Game {
           g.travel = 0;
           const gd = Math.hypot(g.x - px, g.z - pz);
           if (active && gd < 10) this.audio.step(false, (1 - gd / 10) * 0.7);
+        }
+      }
+      // Guards shoulder unlocked doors open on their way through — and
+      // leave them open, because that is somebody else's problem.
+      for (const door of this.built.doors) {
+        if (!door.locked && !door.open) {
+          for (const g of this.guards) {
+            if (g.moving && Math.hypot(g.x - door.cx, g.z - door.cz) < 1.1) {
+              door.open = true;
+              break;
+            }
+          }
         }
       }
       for (const d of this.built.doors) d.update(dt);
@@ -833,6 +947,7 @@ export class Game {
       hasLunch: this.hasLunch,
       lockdown: this.lockdown,
       inventory: [...this.inventory],
+      cans: this.throwsLeft,
       alertBoost: this.alertBoost,
       tutorialIndex: this.tutorialIndex,
       stats: { ...this.stats, time: +this.stats.time.toFixed(1) },

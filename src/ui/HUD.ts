@@ -12,6 +12,7 @@ export class HUD {
   private readonly promptEl = document.getElementById('prompt')!;
   private readonly toastsEl = document.getElementById('toasts')!;
   private readonly keysEl = document.getElementById('keys')!;
+  private readonly cansEl = document.getElementById('cans')!;
   private readonly endEl = document.getElementById('end-overlay')!;
   private readonly endTitleEl = document.getElementById('end-title')!;
   private readonly endBodyEl = document.getElementById('end-body')!;
@@ -56,6 +57,12 @@ export class HUD {
       div.classList.add('fade');
       setTimeout(() => div.remove(), 450);
     }, ms);
+  }
+
+  /** Throwable-can inventory chip. Hidden at zero. */
+  setCans(n: number): void {
+    this.cansEl.textContent = n > 0 ? `CANS ×${n} — Q TO THROW` : '';
+    this.cansEl.style.opacity = n > 0 ? '1' : '0';
   }
 
   setKeycards(ids: Iterable<string>): void {

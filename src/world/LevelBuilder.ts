@@ -195,9 +195,11 @@ export interface LevelDef {
   dark?: Array<[number, number, number, number]>;
   lights: Array<[number, number]>;
   windowsSide?: 'N' | 'S' | null;
+  /** Soda cans lying around [x, z] — the player's throwable ammunition. */
+  cans?: Array<[number, number]>;
   fridge: { x: number; z: number };
   exit: Zone;
-  /** L5: after the grab, the lockdown reroutes you to this exit. */
+  /** Finale: after the grab, the lockdown reroutes you to this exit. */
   exitLockdown?: Zone;
   objectives: { start: string; toFridge: string; escape: string };
   tutorial?: boolean;
@@ -207,6 +209,7 @@ export interface LevelDef {
 
 export interface BuiltKeycard { id: string; x: number; z: number; mesh: THREE.Mesh; }
 export interface BuiltNote { def: NoteDef; mesh: THREE.Mesh; read: boolean; }
+export interface BuiltCan { x: number; z: number; mesh: THREE.Mesh; }
 
 export interface BuiltLevel {
   def: LevelDef;
@@ -216,6 +219,7 @@ export interface BuiltLevel {
   cameras: SecurityCamera[];
   lasers: LaserTrip[];
   notes: BuiltNote[];
+  cans: BuiltCan[];
 }
 
 /** Wall/ceiling-mounted sweeping camera. Flags the player when heat maxes. */
@@ -1021,5 +1025,23 @@ export function buildLevel(def: LevelDef, world: CollisionWorld): BuiltLevel {
     return laser;
   });
 
-  return { def, root, doors, keycards, cameras, lasers, notes };
+  // ---- Soda cans: throwable pickups. A faint cool glow keeps them
+  // findable on dim floors; no collider — they're litter, not furniture. ----
+  const canMat = new THREE.MeshStandardMaterial({
+    color: 0xb9c0c6,
+    metalness: 0.6,
+    roughness: 0.35,
+    emissive: 0x2a5b8a,
+    emissiveIntensity: 0.4
+  });
+  const canGeo = new THREE.CylinderGeometry(0.055, 0.055, 0.14, 10);
+  const cans: BuiltCan[] = (def.cans ?? []).map(([x, z]) => {
+    const mesh = new THREE.Mesh(canGeo, canMat);
+    mesh.position.set(x, 0.07, z);
+    mesh.castShadow = true;
+    root.add(mesh);
+    return { x, z, mesh };
+  });
+
+  return { def, root, doors, keycards, cameras, lasers, notes, cans };
 }

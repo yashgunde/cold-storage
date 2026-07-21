@@ -78,11 +78,18 @@
     }
     .toast.fade { opacity: 0; }
     #keys { position: absolute; left: 24px; bottom: 52px; display: flex; gap: 6px; }
+    #cans {
+      position: absolute; left: 24px; bottom: 84px;
+      font-size: 11px; letter-spacing: 0.15em; color: #ffd27d;
+      opacity: 0; transition: opacity 0.2s; text-shadow: 0 1px 6px rgba(0,0,0,0.8);
+    }
     .keychip {
       font-size: 11px; letter-spacing: 0.15em; padding: 3px 10px; border-radius: 3px;
       background: #243147; border: 1px solid rgba(232,234,237,0.25);
     }
     .keychip.key-blue { background: #1d3a6b; border-color: #3b82f6; }
+    .keychip.key-red { background: #6b1d1d; border-color: #ef4444; }
+    .keychip.key-violet { background: #3d1d6b; border-color: #8b5cf6; }
     #end-overlay {
       position: absolute; inset: 0;
       display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -206,6 +213,7 @@
     <div id="prompt"></div>
     <div id="toasts"></div>
     <div id="keys"></div>
+    <div id="cans"></div>
     <div id="end-overlay" class="hidden">
       <div class="brand">HALCYON DYNAMICS · INCIDENT REPORT</div>
       <h2 id="end-title"></h2>

@@ -8,13 +8,19 @@ export interface NoiseEvent {
   radius: number;
   /** How much suspicion a guard gains on hearing this (0..1). */
   strength: number;
+  /**
+   * A deliberate decoy (thrown can). Guards localize it exactly — the
+   * clatter is distinctive — but each guard falls for it a little less
+   * every time, and a guard who WATCHED the throw goes after the thrower.
+   */
+  lure?: boolean;
 }
 
 export class NoiseSystem {
   private events: NoiseEvent[] = [];
 
-  emit(x: number, z: number, radius: number, strength: number): void {
-    this.events.push({ x, z, radius, strength });
+  emit(x: number, z: number, radius: number, strength: number, lure = false): void {
+    this.events.push({ x, z, radius, strength, lure });
   }
 
   /** Events emitted since last frame. Read once per frame by Game. */

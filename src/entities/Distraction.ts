@@ -17,6 +17,8 @@ export class Distraction {
   readonly mesh: THREE.Mesh;
   private t = 0;
   landed = false;
+  /** Picked back up by the player — cans are a recoverable resource. */
+  taken = false;
 
   constructor(
     private readonly from: THREE.Vector3,
