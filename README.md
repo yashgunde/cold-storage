@@ -48,4 +48,8 @@ Collectible sticky notes carry the story. Progress and graphics settings save au
 
 ## Tech
 
-TypeScript + Three.js + Vite. All art is procedural low-poly (no downloaded assets); all audio is synthesized with WebAudio. Targets 60 FPS at 1080p on a dedicated GPU — use the **GRAPHICS: HIGH/LOW** toggle in the lobby if needed.
+TypeScript + Three.js + Vite. All art is procedural low-poly (no downloaded assets); sound effects and voices are synthesized with WebAudio. Targets 60 FPS at 1080p on a dedicated GPU — use the **GRAPHICS: HIGH/LOW** toggle in the lobby if needed.
+
+## Credits
+
+Background music: **"Girls Rituals" by HRT** (slowed + reverb edit), streamed live from YouTube via the official IFrame Player API — nothing is downloaded or bundled. Edit uploaded by [FontaineFuturistics](https://www.youtube.com/@FontaineFuturistics_x): https://www.youtube.com/watch?v=tKTgdMHV8Ks
