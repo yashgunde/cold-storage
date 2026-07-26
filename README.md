@@ -2,6 +2,10 @@
 
 *A first-person office stealth game about the most morally bankrupt heist in corporate history: stealing the intern's lunch. Fully vibecoded with Claude lol*
 
+### ▶ [Play it free in your browser](https://yashgunde.github.io/cold-storage/)
+
+No install, no download — built with TypeScript + Three.js, runs entirely client-side.
+
 You are Employee #7431 at **Halcyon Dynamics**. On your first day, someone takes your lunch from the communal fridge. What follows is a climb through the entire tower — promotion by promotion, fridge by fridge — toward Sub-Level B, where the company keeps the **First Lunch (1987, never eaten)** and the answer to why the intern's lunch is always, impossibly, perfect.
 
 ## How to run
